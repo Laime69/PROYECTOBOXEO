@@ -1,0 +1,15 @@
+-- Seed: Usuario Administrador de prueba
+-- El usuario ya existe en BD con estos datos:
+--   correo: admin@invictus.com
+--   contraseña: hola123
+--   rol: Administrador
+--   nombre: Administrador
+--
+-- Si necesitas recrearlo (solo si no existe):
+-- INSERT INTO usuarios (nombre, correo, password, rol)
+-- VALUES (
+--   'Administrador',
+--   'admin@invictus.com',
+--   '$2b$10$j7hso94FgOtNHSlAAKCcpuPFjO.FDqZfP6vHpoii2gBnwRAVigWJO', -- bcrypt de 'hola123'
+--   'Administrador'
+-- );
