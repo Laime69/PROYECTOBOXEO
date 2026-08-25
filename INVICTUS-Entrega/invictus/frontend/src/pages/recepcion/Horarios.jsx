@@ -69,13 +69,13 @@ function RecepcionHorarios() {
   return (
     <div>
       <div className="mb-6">
-        <h2 className="text-2xl font-bold text-gray-800">Horarios Semanales</h2>
-        <p className="text-gray-500 mt-1">Consulta de horarios de clases</p>
+        <h2 className="text-2xl font-bold text-[#172033]">Horarios Semanales</h2>
+        <p className="text-slate-500 mt-1">Consulta de horarios de clases</p>
       </div>
 
       {error && <div className="mb-4 bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-700">{error}</div>}
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+      <div className="bg-white rounded-xl shadow-card border border-gray-200/70 transition-all duration-200 overflow-hidden">
         {loading ? (
           <div className="flex justify-center py-12">
             <div className="w-8 h-8 border-4 border-invictus-200 border-t-invictus-600 rounded-full animate-spin" />
@@ -85,23 +85,23 @@ function RecepcionHorarios() {
             <table className="w-full min-w-[600px]">
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-200">
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-600 w-44">Turno</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold text-slate-500 w-44">Turno</th>
                   {DIAS.map(d => (
-                    <th key={d.key} className="px-4 py-3 text-center text-sm font-semibold text-gray-600">{d.label}</th>
+                    <th key={d.key} className="px-4 py-3 text-center text-sm font-semibold text-slate-500">{d.label}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {TURNOS.map(turno => (
                   <tr key={turno.key} className="border-b border-gray-100">
-                    <td className="px-4 py-4 text-sm font-medium text-gray-800 bg-gray-50/50">
+                    <td className="px-4 py-4 text-sm font-medium text-[#172033] bg-gray-50/50">
                       <div>{turno.label}</div>
                       <div className="text-xs text-gray-400 font-normal">{turno.hora}</div>
                     </td>
                     {DIAS.map(dia => {
                       const h = getCelda(turno.key, dia.key);
                       const isSparring = dia.key === 'viernes' || h?.tipo_actividad === 'sparring';
-                      const cellBg = isSparring ? 'bg-red-50/40' : '';
+                      const cellBg = isSparring ? 'bg-[#FFF1F2] border-[#E11D48]/30' : 'bg-[#F0FDF8] border-[#00A878]/25';
                       return (
                         <td key={dia.key} className={`px-2 py-2 text-center border-l border-gray-50 ${cellBg}`}>
                           {h ? (
@@ -111,13 +111,13 @@ function RecepcionHorarios() {
                                   Sparring
                                 </span>
                               )}
-                              <span className={`text-sm font-medium ${h.entrenador_nombre ? 'text-gray-800' : 'text-gray-400'}`}>
+                              <span className={`text-sm font-medium ${h.entrenador_nombre ? 'text-[#172033]' : 'text-gray-400'}`}>
                                 {h.entrenador_nombre || 'Sin asignar'}
                               </span>
-                              <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${h.estado === 'activo' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-500'}`}>
+                              <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${h.estado === 'activo' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-slate-500'}`}>
                                 {h.estado === 'activo' ? 'Activo' : 'Inactivo'}
                               </span>
-                              <span className="text-xs text-gray-500 font-medium">
+                              <span className="text-xs text-slate-500 font-medium">
                                 Alumnos: {h.total_alumnos ?? 0}
                               </span>
                               <button
@@ -144,11 +144,11 @@ function RecepcionHorarios() {
       <div className="mt-4 flex items-center gap-6 text-sm">
         <div className="flex items-center gap-2">
           <span className="w-3 h-3 rounded-full bg-green-500 inline-block" />
-          <span className="text-gray-600">Activo</span>
+          <span className="text-slate-500">Activo</span>
         </div>
         <div className="flex items-center gap-2">
           <span className="w-3 h-3 rounded-full bg-gray-400 inline-block" />
-          <span className="text-gray-600">Inactivo</span>
+          <span className="text-slate-500">Inactivo</span>
         </div>
         <div className="flex items-center gap-2">
           <span className="px-2 py-0.5 bg-red-100 text-red-700 rounded-full text-xs font-bold">Sparring</span>
@@ -156,25 +156,25 @@ function RecepcionHorarios() {
       </div>
 
       {showAlumnosModal && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-lg mx-4">
+        <div className="fixed inset-0 bg-[#071A2B]/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
+          <div className="bg-white rounded-2xl shadow-modal p-6 w-full max-w-lg mx-4 animate-scale-in">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold text-gray-800">
+              <h3 className="text-lg font-bold text-[#172033]">
                 Alumnos - Turno {NOMBRES_TURNO[selectedTurnoAlumnos] || selectedTurnoAlumnos}
               </h3>
-              <button onClick={() => setShowAlumnosModal(false)} className="text-gray-400 hover:text-gray-600 text-xl">&times;</button>
+              <button onClick={() => setShowAlumnosModal(false)} className="text-gray-400 hover:text-slate-500 text-xl">&times;</button>
             </div>
             {alumnosLoading ? (
               <div className="flex justify-center py-8">
                 <div className="w-8 h-8 border-4 border-invictus-200 border-t-invictus-600 rounded-full animate-spin" />
               </div>
             ) : alumnosList.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">No hay alumnos inscritos en este turno</div>
+              <div className="text-center py-8 text-slate-500">No hay alumnos inscritos en este turno</div>
             ) : (
               <div className="max-h-80 overflow-y-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="text-left text-gray-500 border-b border-gray-100">
+                    <tr className="text-left text-slate-500 border-b border-gray-100">
                       <th className="px-3 py-2 font-medium">Nombre</th>
                       <th className="px-3 py-2 font-medium">Email</th>
                       <th className="px-3 py-2 font-medium">Estado pago</th>
@@ -183,8 +183,8 @@ function RecepcionHorarios() {
                   <tbody>
                     {alumnosList.map((al) => (
                       <tr key={al.id_usuario || al.id} className="border-b border-gray-50 hover:bg-gray-50">
-                        <td className="px-3 py-2 font-medium text-gray-800">{al.alumno_nombre || al.nombre}</td>
-                        <td className="px-3 py-2 text-gray-500">{al.alumno_correo || al.correo || '—'}</td>
+                        <td className="px-3 py-2 font-medium text-[#172033]">{al.alumno_nombre || al.nombre}</td>
+                        <td className="px-3 py-2 text-slate-500">{al.alumno_correo || al.correo || '—'}</td>
                         <td className="px-3 py-2">
                           <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
                             al.estado_pago === 'pagado' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
@@ -200,7 +200,7 @@ function RecepcionHorarios() {
             )}
             <div className="flex justify-end mt-4">
               <button onClick={() => setShowAlumnosModal(false)}
-                className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 border border-gray-300 rounded-lg">
+                className="px-4 py-2 text-sm text-slate-500 hover:text-[#172033] border border-gray-300 rounded-lg">
                 Cerrar
               </button>
             </div>

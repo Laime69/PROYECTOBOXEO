@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { getUsers, updateUser } from '../../services/usuarioService';
 import { asignarTurno, getHorarioActual } from '../../services/alumnoHorarioService';
 import UserDetailModal from '../../components/UserDetailModal';
+import ActionButton from '../../components/ActionButton';
 
 const TURNOS = [
   { key: 'manana', label: 'Mañana', horario: '09:00 - 11:00' },
@@ -35,6 +36,19 @@ function RecepcionAlumnos() {
   const [busqueda, setBusqueda] = useState('');
   const [filtroTurno, setFiltroTurno] = useState('');
 
+  useEffect(() => {
+    if (!error) return undefined;
+    const t = setTimeout(() => setError(''), 4000);
+    return () => clearTimeout(t);
+  }, [error]);
+
+  useEffect(() => {
+    if (!success) return undefined;
+    const t = setTimeout(() => setSuccess(''), 4000);
+    return () => clearTimeout(t);
+  }, [success]);
+
+  // autodismiss-ok
   const fetchAlumnos = async () => {
     setLoading(true);
     try {
@@ -176,94 +190,92 @@ function RecepcionAlumnos() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h2 className="text-2xl font-bold text-gray-800">Alumnos</h2>
-          <p className="text-gray-500 mt-1">Consultar alumnos registrados</p>
+          <h2 className="text-2xl font-bold text-[#172033]">Alumnos</h2>
+          <p className="text-slate-500 mt-1">Consultar alumnos registrados</p>
         </div>
       </div>
 
       {error && <div className="mb-4 bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-700">{error}</div>}
       {success && <div className="mb-4 bg-green-50 border border-green-200 rounded-lg px-4 py-3 text-sm text-green-700">{success}</div>}
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 mb-4">
-        <div className="flex flex-wrap items-center gap-4">
-          <div className="flex-1 min-w-[220px]">
-            <input
-              type="text"
-              value={busqueda}
-              onChange={(e) => setBusqueda(e.target.value)}
-              placeholder="Buscar por nombre, correo, CI o celular..."
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-invictus-500"
-            />
-          </div>
-          <div>
-            <label className="text-xs font-medium text-gray-500 uppercase block mb-1">Turno</label>
-            <div className="flex gap-1">
-              {['', ...Object.keys(NOMBRES_TURNO)].map((tur) => (
-                <button
-                  key={tur}
-                  onClick={() => setFiltroTurno(tur)}
-                  className={`px-3 py-1 text-xs font-medium rounded-lg transition-colors ${
-                    filtroTurno === tur
-                      ? 'bg-invictus-600 text-white'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                  }`}
-                >
-                  {tur ? NOMBRES_TURNO[tur] : 'Todos'}
-                </button>
-              ))}
+      {/* ── Barra de filtros ── */}
+      <div className="bg-white rounded-xl shadow-card border border-gray-200/70 transition-all duration-200 p-4 mb-5">
+        <div className="flex flex-wrap items-end gap-x-5 gap-y-3">
+          <div className="flex-1 min-w-[230px]">
+            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Buscar alumno</label>
+            <div className="relative">
+              <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+              <input
+                type="text"
+                value={busqueda}
+                onChange={(e) => setBusqueda(e.target.value)}
+                placeholder="Nombre, correo, CI o celular..."
+                className="w-full border border-gray-300 rounded-lg pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-invictus-500"
+              />
             </div>
           </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Turno</label>
+            <select value={filtroTurno} onChange={(e) => setFiltroTurno(e.target.value)}
+              className={`border rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-invictus-500 ${filtroTurno ? 'border-invictus-400 text-invictus-700 font-medium' : 'border-gray-300'}`}>
+              <option value="">Todos</option>
+              {Object.entries(NOMBRES_TURNO).map(([k, v]) => (
+                <option key={k} value={k}>{v}</option>
+              ))}
+            </select>
+          </div>
+          {(busqueda || filtroTurno) && (
+            <div>
+              <span className="block text-xs font-semibold text-transparent uppercase tracking-wide mb-1 select-none">.</span>
+              <button
+                onClick={() => { setBusqueda(''); setFiltroTurno(''); }}
+                className="px-4 py-2 text-sm font-medium text-slate-500 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors whitespace-nowrap"
+              >
+                Limpiar filtros
+              </button>
+            </div>
+          )}
         </div>
         {(busqueda || filtroTurno) && (
-          <p className="text-xs text-gray-400 mt-2">
-            {alumnosFiltrados.length} de {alumnos.length} alumnos
-            <button
-              onClick={() => { setBusqueda(''); setFiltroTurno(''); }}
-              className="ml-2 text-invictus-600 hover:text-invictus-800 font-medium"
-            >
-              Limpiar filtros
-            </button>
-          </p>
+          <p className="text-xs text-gray-400 mt-3">Mostrando {alumnosFiltrados.length} de {alumnos.length} alumnos</p>
         )}
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+      <div className="bg-white rounded-xl shadow-card border border-gray-200/70 transition-all duration-200 overflow-hidden">
         {loading ? (
           <div className="flex justify-center py-12">
             <div className="w-8 h-8 border-4 border-invictus-200 border-t-invictus-600 rounded-full animate-spin" />
           </div>
         ) : alumnos.length === 0 ? (
-          <div className="text-center py-12 text-gray-500">No hay alumnos registrados</div>
+          <div className="text-center py-12 text-slate-500">No hay alumnos registrados</div>
         ) : alumnosFiltrados.length === 0 ? (
-          <div className="text-center py-12 text-gray-500">No hay alumnos que coincidan con los filtros</div>
+          <div className="text-center py-12 text-slate-500">No hay alumnos que coincidan con los filtros</div>
         ) : (
           <table className="w-full">
             <thead>
-              <tr className="text-left text-sm text-gray-500 border-b border-gray-100">
-                <th className="px-4 py-3 font-medium">Nombre</th>
-                <th className="px-4 py-3 font-medium">CI</th>
-                <th className="px-4 py-3 font-medium">Celular</th>
-                <th className="px-4 py-3 font-medium">Correo</th>
-                <th className="px-4 py-3 font-medium">Turno</th>
-                <th className="px-4 py-3 font-medium text-right">Acción</th>
+              <tr className="text-left text-[11px] uppercase tracking-wider text-slate-400 border-b border-gray-200 bg-slate-50">
+                <th className="px-4 py-3 font-semibold">Nombre</th>
+                <th className="px-4 py-3 font-semibold">CI</th>
+                <th className="px-4 py-3 font-semibold">Celular</th>
+                <th className="px-4 py-3 font-semibold">Correo</th>
+                <th className="px-4 py-3 font-semibold">Turno</th>
+                <th className="px-4 py-3 font-semibold text-right">Acción</th>
               </tr>
             </thead>
             <tbody>
               {alumnosFiltrados.map((a) => (
                 <tr key={a.id_usuario} className="border-b border-gray-50 hover:bg-gray-50">
-                  <td className="px-4 py-3 text-sm font-medium text-gray-800">{a.nombre}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{a.ci || '—'}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{a.celular || '—'}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{a.correo}</td>
-                  <td className="px-4 py-3 text-sm text-gray-500">{getTurnoLabel(a.turno)}</td>
+                  <td className="px-4 py-3 text-sm font-medium text-[#172033]">{a.nombre}</td>
+                  <td className="px-4 py-3 text-sm text-slate-500">{a.ci || '—'}</td>
+                  <td className="px-4 py-3 text-sm text-slate-500">{a.celular || '—'}</td>
+                  <td className="px-4 py-3 text-sm text-slate-500">{a.correo}</td>
+                  <td className="px-4 py-3 text-sm text-slate-500">{getTurnoLabel(a.turno)}</td>
                   <td className="px-4 py-3 text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      <button onClick={() => setViewUserId(a.id_usuario)} className="text-sm text-blue-600 hover:text-blue-800 font-medium">
-                        Ver
-                      </button>
-                      <button onClick={() => openEdit(a)} className="text-sm text-invictus-600 hover:text-invictus-800 font-medium">
-                        Editar
-                      </button>
+                    <div className="flex items-center justify-end gap-1.5">
+                      <ActionButton tipo="ver" onClick={() => setViewUserId(a.id_usuario)} />
+                      <ActionButton tipo="editar" onClick={() => openEdit(a)} titulo={`Editar a ${a.nombre}`} />
                     </div>
                   </td>
                 </tr>
@@ -274,14 +286,14 @@ function RecepcionAlumnos() {
       </div>
 
       {showForm && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-md mx-4">
-            <h3 className="text-lg font-bold text-gray-800 mb-4">
+        <div className="fixed inset-0 bg-[#071A2B]/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
+          <div className="bg-white rounded-2xl shadow-modal p-6 w-full max-w-md mx-4 animate-scale-in">
+            <h3 className="text-lg font-bold text-[#172033] mb-4">
               {editando ? 'Editar Alumno' : 'Editar Alumno'}
             </h3>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-600 mb-1">Nombre completo</label>
+                <label className="block text-sm font-medium text-slate-500 mb-1">Nombre completo</label>
                 <input
                   type="text" name="nombre" value={form.nombre}
                   onChange={(e) => { setForm({ ...form, nombre: e.target.value }); setFormErrors({ ...formErrors, nombre: '' }); }}
@@ -290,7 +302,7 @@ function RecepcionAlumnos() {
                 {formErrors.nombre && <p className="text-xs text-red-500 mt-1">{formErrors.nombre}</p>}
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-600 mb-1">Correo electrónico</label>
+                <label className="block text-sm font-medium text-slate-500 mb-1">Correo electrónico</label>
                 <input
                   type="email" name="correo" value={form.correo}
                   onChange={(e) => { setForm({ ...form, correo: e.target.value }); setFormErrors({ ...formErrors, correo: '' }); }}
@@ -299,7 +311,7 @@ function RecepcionAlumnos() {
                 {formErrors.correo && <p className="text-xs text-red-500 mt-1">{formErrors.correo}</p>}
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-600 mb-1">
+                <label className="block text-sm font-medium text-slate-500 mb-1">
                   Contraseña <span className="text-gray-400 font-normal">(dejar vacío para no cambiar)</span>
                 </label>
                 <input
@@ -309,7 +321,7 @@ function RecepcionAlumnos() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-600 mb-1">Cédula de Identidad (CI)</label>
+                <label className="block text-sm font-medium text-slate-500 mb-1">Cédula de Identidad (CI)</label>
                 <input
                   type="text" name="ci" value={form.ci}
                   onChange={(e) => { setForm({ ...form, ci: e.target.value }); setFormErrors({ ...formErrors, ci: '' }); }}
@@ -318,7 +330,7 @@ function RecepcionAlumnos() {
                 {formErrors.ci && <p className="text-xs text-red-500 mt-1">{formErrors.ci}</p>}
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-600 mb-1">Fecha de Nacimiento</label>
+                <label className="block text-sm font-medium text-slate-500 mb-1">Fecha de Nacimiento</label>
                 <input
                   type="date" name="fecha_nacimiento" value={form.fecha_nacimiento}
                   onChange={(e) => { setForm({ ...form, fecha_nacimiento: e.target.value }); setFormErrors({ ...formErrors, fecha_nacimiento: '' }); }}
@@ -327,7 +339,7 @@ function RecepcionAlumnos() {
                 />
                 {formErrors.fecha_nacimiento && <p className="text-xs text-red-500 mt-1">{formErrors.fecha_nacimiento}</p>}
                 {form.fecha_nacimiento && !formErrors.fecha_nacimiento && (
-                  <p className="mt-1 text-xs text-gray-500">
+                  <p className="mt-1 text-xs text-slate-500">
                     Edad: {(() => {
                       const hoy = new Date();
                       const nac = new Date(form.fecha_nacimiento);
@@ -342,7 +354,7 @@ function RecepcionAlumnos() {
                 )}
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-600 mb-1">Celular</label>
+                <label className="block text-sm font-medium text-slate-500 mb-1">Celular</label>
                 <input
                   type="tel" name="celular" value={form.celular}
                   onChange={(e) => { setForm({ ...form, celular: e.target.value }); setFormErrors({ ...formErrors, celular: '' }); }}
@@ -351,7 +363,7 @@ function RecepcionAlumnos() {
                 {formErrors.celular && <p className="text-xs text-red-500 mt-1">{formErrors.celular}</p>}
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-600 mb-1">Dirección</label>
+                <label className="block text-sm font-medium text-slate-500 mb-1">Dirección</label>
                 <input
                   type="text" name="direccion" value={form.direccion}
                   onChange={(e) => { setForm({ ...form, direccion: e.target.value }); setFormErrors({ ...formErrors, direccion: '' }); }}
@@ -363,7 +375,7 @@ function RecepcionAlumnos() {
                 <h4 className="text-sm font-semibold text-gray-700 mb-3">Contacto de Emergencia</h4>
                 <div className="space-y-3">
                   <div>
-                    <label className="block text-sm font-medium text-gray-600 mb-1">Nombre del contacto</label>
+                    <label className="block text-sm font-medium text-slate-500 mb-1">Nombre del contacto</label>
                     <input
                       type="text" name="contacto_emergencia" value={form.contacto_emergencia}
                       onChange={(e) => setForm({ ...form, contacto_emergencia: e.target.value })}
@@ -371,7 +383,7 @@ function RecepcionAlumnos() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-600 mb-1">Celular del contacto</label>
+                    <label className="block text-sm font-medium text-slate-500 mb-1">Celular del contacto</label>
                     <input
                       type="tel" name="celular_contacto_emergencia" value={form.celular_contacto_emergencia}
                       onChange={(e) => setForm({ ...form, celular_contacto_emergencia: e.target.value })}
@@ -384,7 +396,7 @@ function RecepcionAlumnos() {
                 <h4 className="text-sm font-semibold text-gray-700 mb-3">Datos Deportivos</h4>
                 <div className="space-y-3">
                   <div>
-                    <label className="block text-sm font-medium text-gray-600 mb-1">Nivel deportivo</label>
+                    <label className="block text-sm font-medium text-slate-500 mb-1">Nivel deportivo</label>
                     <select
                       name="nivel_deportivo" value={form.nivel_deportivo}
                       onChange={(e) => setForm({ ...form, nivel_deportivo: e.target.value })}
@@ -396,7 +408,7 @@ function RecepcionAlumnos() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-600 mb-1">Peso actual (kg)</label>
+                    <label className="block text-sm font-medium text-slate-500 mb-1">Peso actual (kg)</label>
                     <input
                       type="number" name="peso_actual" value={form.peso_actual}
                       onChange={(e) => setForm({ ...form, peso_actual: e.target.value })}
@@ -405,7 +417,7 @@ function RecepcionAlumnos() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-600 mb-1">Objetivo de entrenamiento</label>
+                    <label className="block text-sm font-medium text-slate-500 mb-1">Objetivo de entrenamiento</label>
                     <input
                       type="text" name="objetivo_entrenamiento" value={form.objetivo_entrenamiento}
                       onChange={(e) => setForm({ ...form, objetivo_entrenamiento: e.target.value })}
@@ -413,7 +425,7 @@ function RecepcionAlumnos() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-600 mb-1">Observación médica</label>
+                    <label className="block text-sm font-medium text-slate-500 mb-1">Observación médica</label>
                     <textarea
                       name="observacion_medica" value={form.observacion_medica}
                       onChange={(e) => setForm({ ...form, observacion_medica: e.target.value })}
@@ -436,7 +448,7 @@ function RecepcionAlumnos() {
                         className="text-invictus-600 focus:ring-invictus-500"
                       />
                       <div>
-                        <p className="text-sm font-medium text-gray-800">{t.label}</p>
+                        <p className="text-sm font-medium text-[#172033]">{t.label}</p>
                         <p className="text-xs text-gray-400">{t.horario} | Lunes a Viernes</p>
                       </div>
                     </label>
@@ -448,17 +460,17 @@ function RecepcionAlumnos() {
                       value=""
                       checked={turnoAsignar === ''}
                       onChange={(e) => setTurnoAsignar('')}
-                      className="text-gray-500"
+                      className="text-slate-500"
                     />
                     <div>
-                      <p className="text-sm font-medium text-gray-600">Sin turno</p>
+                      <p className="text-sm font-medium text-slate-500">Sin turno</p>
                     </div>
                   </label>
                 </div>
               </div>
               <div className="flex justify-end gap-3 pt-2">
                 <button type="button" onClick={() => { setShowForm(false); resetForm(); }}
-                  className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800">Cancelar</button>
+                  className="px-4 py-2 text-sm text-slate-500 hover:text-[#172033]">Cancelar</button>
                 <button type="submit"
                   className="bg-invictus-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-invictus-700">
                   Guardar Cambios

@@ -82,7 +82,7 @@ function MiPerfil() {
       Entrenador: 'bg-green-100 text-green-800',
       Alumno: 'bg-blue-100 text-blue-800',
     };
-    return `px-2.5 py-0.5 rounded-full text-xs font-medium ${styles[rol] || 'bg-gray-100 text-gray-800'}`;
+    return `px-2.5 py-0.5 rounded-full text-xs font-medium ${styles[rol] || 'bg-gray-100 text-[#172033]'}`;
   };
 
   const getRoleLabel = (rol) => {
@@ -98,14 +98,14 @@ function MiPerfil() {
 
   const getInfoRow = (label, value) => (
     <div className="flex flex-col sm:flex-row sm:items-center py-2.5 border-b border-gray-50 last:border-0">
-      <span className="text-xs font-medium text-gray-500 sm:w-44 mb-1 sm:mb-0">{label}</span>
-      <span className="text-sm text-gray-800">{value || '—'}</span>
+      <span className="text-xs font-medium text-slate-500 sm:w-44 mb-1 sm:mb-0">{label}</span>
+      <span className="text-sm text-[#172033]">{value || '—'}</span>
     </div>
   );
 
   const getSkillBar = (label, value) => (
     <div className="flex items-center gap-3 py-1.5">
-      <span className="text-xs font-medium text-gray-600 w-24">{label}</span>
+      <span className="text-xs font-medium text-slate-500 w-24">{label}</span>
       <div className="flex-1 h-2.5 bg-gray-100 rounded-full overflow-hidden">
         <div
           className="h-full rounded-full transition-all"
@@ -149,22 +149,22 @@ function MiPerfil() {
   return (
     <div>
       <div className="mb-8">
-        <h2 className="text-2xl font-bold text-gray-800">Mi Perfil</h2>
-        <p className="text-gray-500 mt-1">Consulta y gestiona tu información personal</p>
+        <h2 className="text-2xl font-bold text-[#172033]">Mi Perfil</h2>
+        <p className="text-slate-500 mt-1">Consulta y gestiona tu información personal</p>
       </div>
 
       <div className="max-w-3xl">
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="bg-white rounded-xl shadow-card border border-gray-200/70 transition-all duration-200 overflow-hidden">
           <div className="px-6 py-5 bg-gray-50 border-b border-gray-100">
             <div className="flex items-center gap-4">
               <div className="w-16 h-16 bg-invictus-100 text-invictus-700 rounded-full flex items-center justify-center text-2xl font-bold">
                 {perfil.nombre?.charAt(0).toUpperCase()}
               </div>
               <div>
-                <h3 className="text-xl font-bold text-gray-800">{perfil.nombre}</h3>
+                <h3 className="text-xl font-bold text-[#172033]">{perfil.nombre}</h3>
                 <div className="flex items-center gap-2 mt-1">
                   <span className={getRoleBadge(perfil.rol)}>{getRoleLabel(perfil.rol)}</span>
-                  <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${perfil.estado === 'activo' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
+                  <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${perfil.estado === 'activo' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-[#172033]'}`}>
                     {perfil.estado === 'activo' ? 'Activo' : 'Inactivo'}
                   </span>
                 </div>
@@ -177,7 +177,7 @@ function MiPerfil() {
               <button
                 key={tab.key}
                 onClick={() => setActiveTab(tab.key)}
-                className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === tab.key ? 'border-invictus-500 text-invictus-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
+                className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === tab.key ? 'border-invictus-500 text-invictus-600' : 'border-transparent text-slate-500 hover:text-gray-700'}`}
               >
                 {tab.label}
               </button>
@@ -237,7 +237,7 @@ function MiPerfil() {
                 <div className="flex items-center justify-between">
                   <h4 className="text-sm font-semibold text-gray-700">Progreso Deportivo</h4>
                   {perfil.objetivo_entrenamiento && (
-                    <span className="text-xs text-gray-500 bg-gray-50 px-2 py-1 rounded">{perfil.objetivo_entrenamiento}</span>
+                    <span className="text-xs text-slate-500 bg-gray-50 px-2 py-1 rounded">{perfil.objetivo_entrenamiento}</span>
                   )}
                 </div>
                 {progresoLoading ? (
@@ -266,7 +266,7 @@ function MiPerfil() {
                     </div>
 
                     <div className="mt-4">
-                      <h5 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Habilidades</h5>
+                      <h5 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Habilidades</h5>
                       <div className="space-y-0.5">
                         {Object.entries(SKILL_LABELS).map(([key, label]) => (
                           <div key={key}>
@@ -278,7 +278,7 @@ function MiPerfil() {
 
                     {ultimaEvaluacion.observacion && (
                       <div className="mt-3 p-3 bg-gray-50 rounded-lg border border-gray-100">
-                        <p className="text-xs font-medium text-gray-500 mb-1">Observación del entrenador</p>
+                        <p className="text-xs font-medium text-slate-500 mb-1">Observación del entrenador</p>
                         <p className="text-sm text-gray-700">{ultimaEvaluacion.observacion}</p>
                       </div>
                     )}

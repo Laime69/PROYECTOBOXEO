@@ -1,6 +1,7 @@
 const Asistencia = require('../models/Asistencia');
 const Horario = require('../models/Horario');
 const Usuario = require('../models/Usuario');
+const Pago = require('../models/Pago');
 
 class ReporteService {
   async getAsistenciasEntrenador(entrenadorId, fechaInicio = null, fechaFin = null) {
@@ -27,18 +28,62 @@ class ReporteService {
     };
   }
 
-  async getAsistenciasPorFecha(fechaInicio, fechaFin) {
-    return await Asistencia.countByFecha(fechaInicio, fechaFin);
+  async getDetalleAsistencias(filtros) {
+    const filas = await Asistencia.findAll(filtros);
+
+    const resumen = {
+      total: filas.length,
+      presentes: 0,
+      faltas: 0,
+      tardanzas: 0,
+      justificados: 0,
+      permisos: 0,
+      alumnos_distintos: new Set(filas.map((f) => f.alumno_id)).size,
+      dias_distintos: new Set(filas.map((f) => String(f.fecha).slice(0, 10))).size,
+    };
+
+    for (const fila of filas) {
+      if (fila.estado === 'presente') resumen.presentes += 1;
+      else if (fila.estado === 'falta') resumen.faltas += 1;
+      else if (fila.estado === 'tardanza') resumen.tardanzas += 1;
+      else if (fila.estado === 'justificado') resumen.justificados += 1;
+      else if (fila.estado === 'permiso') resumen.permisos += 1;
+    }
+
+    return { filas, resumen };
   }
 
-  async getResumenPagos() {
-    const usuarios = await Usuario.countAll();
-    const pagados = await Usuario.countPagados();
+  async getReportePagos({ mes, anio, estado, turno, busqueda }) {
+    const [resumenMes, filas] = await Promise.all([
+      Pago.getResumen(mes, anio),
+      Pago.findAll({ mes, anio, estado, turno, busqueda }),
+    ]);
+
+    let ingresos_filtrados = 0;
+    let pagados_filtrados = 0;
+    let pendientes_filtrados = 0;
+    let vencidos_filtrados = 0;
+
+    for (const fila of filas) {
+      if (fila.estado_pago === 'pagado') {
+        pagados_filtrados += 1;
+        ingresos_filtrados += Number(fila.monto) || 0;
+      } else if (fila.estado_pago === 'vencido') {
+        vencidos_filtrados += 1;
+      } else {
+        pendientes_filtrados += 1;
+      }
+    }
+
     return {
-      total_alumnos: usuarios.alumnos,
-      alumnos_pagados: pagados,
-      alumnos_pendientes: usuarios.alumnos - pagados,
+      resumen: { ...resumenMes },
+      filtros_aplicados: { pagados: pagados_filtrados, pendientes: pendientes_filtrados, vencidos: vencidos_filtrados, ingresos: ingresos_filtrados },
+      filas,
     };
+  }
+
+  async getAsistenciasPorFecha(fechaInicio, fechaFin) {
+    return await Asistencia.countByFecha(fechaInicio, fechaFin);
   }
 }
 

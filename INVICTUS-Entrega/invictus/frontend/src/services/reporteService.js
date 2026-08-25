@@ -5,9 +5,14 @@ export const getResumenGeneral = async () => {
   return response.data;
 };
 
-export const getResumenPagos = async () => {
-  const response = await api.get('/reportes/pagos');
+export const getReportePagos = async (params = {}) => {
+  const response = await api.get('/reportes/pagos', { params });
   return response.data;
+};
+
+export const getResumenPagos = async ({ mes, anio } = {}) => {
+  const data = await getReportePagos({ mes, anio });
+  return { resumen: data.datos?.resumen ?? data.resumen };
 };
 
 export const getAsistenciasEntrenador = async (fecha_inicio, fecha_fin) => {
@@ -17,9 +22,15 @@ export const getAsistenciasEntrenador = async (fecha_inicio, fecha_fin) => {
   return response.data;
 };
 
-export const getAsistenciasPorFecha = async (fecha_inicio, fecha_fin) => {
-  const response = await api.get('/reportes/asistencias', {
-    params: { fecha_inicio, fecha_fin },
-  });
+export const getAsistenciasFiltradas = async (params = {}) => {
+  const response = await api.get('/reportes/asistencias', { params });
   return response.data;
+};
+
+export default {
+  getResumenGeneral,
+  getReportePagos,
+  getResumenPagos,
+  getAsistenciasEntrenador,
+  getAsistenciasFiltradas,
 };

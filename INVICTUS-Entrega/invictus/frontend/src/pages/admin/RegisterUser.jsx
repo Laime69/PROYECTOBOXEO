@@ -1,10 +1,18 @@
 import { useState } from 'react';
+import { useTituloPagina } from '../../hooks/useTituloPagina';
 import { useAuth } from '../../context/AuthContext';
 import { registerUser } from '../../services/usuarioService';
 import { asignarTurno } from '../../services/alumnoHorarioService';
 import UserRoleFields from '../../components/UserRoleFields';
 
+const PASOS = [
+  { num: 1, titulo: 'Cuenta', desc: 'Acceso al sistema' },
+  { num: 2, titulo: 'Datos personales', desc: 'Identificación y contacto' },
+  { num: 3, titulo: 'Datos del rol', desc: 'Información específica' },
+];
+
 function RegisterUser() {
+  useTituloPagina('Registrar Usuario');
   const { user } = useAuth();
   const isSuperAdmin = user?.rol === 'SuperAdmin';
 
@@ -19,6 +27,7 @@ function RegisterUser() {
   };
 
   const [form, setForm] = useState(initialForm);
+  const [paso, setPaso] = useState(1);
   const [errors, setErrors] = useState({});
   const [serverError, setServerError] = useState('');
   const [success, setSuccess] = useState('');
@@ -40,7 +49,7 @@ function RegisterUser() {
         { value: 'Recepcionista', label: 'Recepción / Cajero' },
       ];
 
-  const validateForm = () => {
+  const validarPaso1 = () => {
     const e = {};
     if (!form.nombre.trim()) e.nombre = 'El nombre es obligatorio';
     if (!form.correo.trim()) {
@@ -56,6 +65,12 @@ function RegisterUser() {
     if (form.password !== form.confirmPassword) {
       e.confirmPassword = 'Las contraseñas no coinciden';
     }
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  };
+
+  const validarPaso2 = () => {
+    const e = {};
     if (!form.ci.trim()) {
       e.ci = 'La cédula de identidad es obligatoria';
     } else if (form.ci.trim().length > 20) {
@@ -76,7 +91,12 @@ function RegisterUser() {
     } else if (form.direccion.trim().length > 255) {
       e.direccion = 'Máximo 255 caracteres';
     }
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  };
 
+  const validarPaso3 = () => {
+    const e = {};
     const rol = form.rol;
     if (rol === 'Alumno') {
       if (!turnoAsignar) {
@@ -93,10 +113,19 @@ function RegisterUser() {
     } else if (rol === 'Administrador') {
       if (!form.cargo.trim()) e.cargo = 'El cargo es obligatorio';
     }
-
-    setErrors(e);
     setTurnoError('');
+    setErrors(e);
     return Object.keys(e).length === 0;
+  };
+
+  const siguiente = () => {
+    const valido = paso === 1 ? validarPaso1() : paso === 2 ? validarPaso2() : validarPaso3();
+    if (valido) setPaso((p) => Math.min(p + 1, 3));
+  };
+
+  const atras = () => {
+    setErrors({});
+    setPaso((p) => Math.max(p - 1, 1));
   };
 
   const handleChange = (e) => {
@@ -118,7 +147,7 @@ function RegisterUser() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!validateForm()) return;
+    if (!validarPaso3()) return;
     setLoading(true);
     setServerError('');
     setSuccess('');
@@ -174,10 +203,11 @@ function RegisterUser() {
       if (form.rol === 'Alumno' && turnoAsignar && data.usuario?.id_usuario) {
         await asignarTurno(data.usuario.id_usuario, turnoAsignar);
       }
-      setSuccess(`"${data.usuario.nombre}" registrado como ${form.rol}`);
+      setSuccess(`"${data.usuario.nombre}" fue registrado correctamente como ${form.rol}`);
       setForm(initialForm);
       setTurnoAsignar('');
       setTurnoError('');
+      setPaso(1);
     } catch (err) {
       const msg = err.response?.data?.msg || err.response?.data?.errors?.[0] || 'Error al registrar';
       setServerError(msg);
@@ -187,24 +217,66 @@ function RegisterUser() {
   };
 
   return (
-    <div className="w-full max-w-4xl mx-auto">
-      <div className="mb-8">
-        <h2 className="text-2xl font-bold text-gray-800">Registrar Usuario</h2>
-        <p className="text-gray-500 mt-1">Crea un nuevo usuario en el sistema</p>
+    <div className="w-full max-w-3xl mx-auto">
+      <div className="mb-6">
+        <h2 className="text-2xl font-bold text-[#172033]">Registrar Usuario</h2>
+        <p className="text-slate-500 mt-1">Completa los 3 pasos para crear un nuevo usuario</p>
       </div>
 
-      <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-5" noValidate>
-        <UserRoleFields
-          mode="create"
-          form={form}
-          onChange={handleChange}
-          onTurnoChange={handleTurnoChange}
-          errors={errors}
-          roleOptions={roleOptions}
-          isSuperAdmin={isSuperAdmin}
-          turnoAsignar={turnoAsignar}
-          turnoError={turnoError}
-        />
+      {/* ── Indicador de pasos ── */}
+      <div className="flex items-center justify-between mb-6 px-2">
+        {PASOS.map((p, idx) => {
+          const completado = paso > p.num;
+          const actual = paso === p.num;
+          return (
+            <div key={p.num} className={`flex items-center ${idx < PASOS.length - 1 ? 'flex-1' : ''}`}>
+              <div className="flex flex-col items-center text-center">
+                <button
+                  type="button"
+                  onClick={() => completado && setPaso(p.num)}
+                  disabled={!completado}
+                  className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-all ${
+                    completado ? 'bg-green-500 text-white cursor-pointer'
+                      : actual ? 'bg-invictus-600 text-white ring-4 ring-invictus-100'
+                        : 'bg-gray-200 text-gray-400'
+                  }`}
+                >
+                  {completado ? (
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                    </svg>
+                  ) : p.num}
+                </button>
+                <p className={`text-xs mt-1.5 font-semibold whitespace-nowrap ${actual ? 'text-[#172033]' : 'text-gray-400'}`}>{p.titulo}</p>
+                <p className="text-[10px] text-gray-400 hidden sm:block">{p.desc}</p>
+              </div>
+              {idx < PASOS.length - 1 && (
+                <div className={`flex-1 h-0.5 mx-3 mb-6 rounded ${completado ? 'bg-green-500' : 'bg-gray-200'}`} />
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-card border border-gray-200/70 transition-all duration-200 p-6 space-y-5" noValidate>
+        {paso === 1 && <UserRoleFields seccion="cuenta" mode="create" form={form} onChange={handleChange}
+          errors={errors} roleOptions={roleOptions} />}
+
+        {paso === 2 && <UserRoleFields seccion="personal" mode="create" form={form} onChange={handleChange}
+          errors={errors} roleOptions={roleOptions} isSuperAdmin={isSuperAdmin} />}
+
+        {paso === 3 && (
+          <>
+            <div className="flex items-center gap-2 bg-invictus-50 border border-invictus-100 rounded-lg px-3 py-2">
+              <span className="text-xs text-invictus-700">
+                Registrando a <strong>{form.nombre || '—'}</strong> como <strong>{form.rol}</strong>
+              </span>
+            </div>
+            <UserRoleFields seccion="rol" mode="create" form={form} onChange={handleChange}
+              onTurnoChange={handleTurnoChange} errors={errors} roleOptions={roleOptions}
+              isSuperAdmin={isSuperAdmin} turnoAsignar={turnoAsignar} turnoError={turnoError} />
+          </>
+        )}
 
         {serverError && (
           <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-700">
@@ -214,18 +286,40 @@ function RegisterUser() {
 
         {success && (
           <div className="bg-green-50 border border-green-200 rounded-lg px-4 py-3 text-sm text-green-700">
-            {success}
+            ✓ {success}
           </div>
         )}
 
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full py-2.5 bg-invictus-600 hover:bg-invictus-700 disabled:opacity-50 text-white font-semibold rounded-lg transition-colors flex items-center justify-center gap-2"
-        >
-          {loading && <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
-          {loading ? 'Registrando...' : 'Registrar Usuario'}
-        </button>
+        {/* ── Botones de navegación ── */}
+        <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+          <button
+            type="button"
+            onClick={atras}
+            disabled={paso === 1 || loading}
+            className="px-5 py-2.5 text-sm font-medium text-slate-500 bg-gray-100 hover:bg-gray-200 disabled:opacity-40 disabled:cursor-not-allowed rounded-lg transition-colors"
+          >
+            ← Atrás
+          </button>
+
+          {paso < 3 ? (
+            <button
+              type="button"
+              onClick={siguiente}
+              className="px-6 py-2.5 bg-invictus-600 hover:bg-invictus-700 text-white text-sm font-semibold rounded-lg transition-colors"
+            >
+              Siguiente →
+            </button>
+          ) : (
+            <button
+              type="submit"
+              disabled={loading}
+              className="px-6 py-2.5 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white font-semibold rounded-lg transition-colors flex items-center justify-center gap-2"
+            >
+              {loading && <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
+              {loading ? 'Registrando...' : 'Registrar Usuario'}
+            </button>
+          )}
+        </div>
       </form>
     </div>
   );

@@ -139,7 +139,7 @@ function EntrenadorProgreso() {
   };
 
   const getNivelBadge = (nivel) => {
-    const color = COLORES_NIVEL[nivel] || 'bg-gray-100 text-gray-800';
+    const color = COLORES_NIVEL[nivel] || 'bg-gray-100 text-[#172033]';
     const label = NOMBRES_NIVEL[nivel] || nivel;
     return <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${color}`}>{label}</span>;
   };
@@ -155,31 +155,31 @@ function EntrenadorProgreso() {
   return (
     <div>
       <div className="mb-6">
-        <h2 className="text-2xl font-bold text-gray-800">Evaluación Deportiva</h2>
-        <p className="text-gray-500 mt-1">Registra el progreso de tus alumnos</p>
+        <h2 className="text-2xl font-bold text-[#172033]">Evaluación Deportiva</h2>
+        <p className="text-slate-500 mt-1">Registra el progreso de tus alumnos</p>
       </div>
 
       {error && <div className="mb-4 bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-700">{error}</div>}
       {success && <div className="mb-4 bg-green-50 border border-green-200 rounded-lg px-4 py-3 text-sm text-green-700">{success}</div>}
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+      <div className="bg-white rounded-xl shadow-card border border-gray-200/70 transition-all duration-200 overflow-hidden">
         {alumnos.length === 0 ? (
-          <div className="text-center py-12 text-gray-500">No tienes alumnos asignados</div>
+          <div className="text-center py-12 text-slate-500">No tienes alumnos asignados</div>
         ) : (
           <table className="w-full">
             <thead>
-              <tr className="text-left text-sm text-gray-500 border-b border-gray-100">
-                <th className="px-4 py-3 font-medium">Nombre</th>
-                <th className="px-4 py-3 font-medium">Turno</th>
-                <th className="px-4 py-3 font-medium text-center">Estado</th>
-                <th className="px-4 py-3 font-medium text-right">Acción</th>
+              <tr className="text-left text-[11px] uppercase tracking-wider text-slate-400 border-b border-gray-200 bg-slate-50">
+                <th className="px-4 py-3 font-semibold">Nombre</th>
+                <th className="px-4 py-3 font-semibold">Turno</th>
+                <th className="px-4 py-3 font-semibold text-center">Estado</th>
+                <th className="px-4 py-3 font-semibold text-right">Acción</th>
               </tr>
             </thead>
             <tbody>
               {alumnos.map((a) => (
                 <tr key={a.id || a.alumno_id || a.id_usuario} className="border-b border-gray-50 hover:bg-gray-50">
-                  <td className="px-4 py-3 text-sm font-medium text-gray-800">{a.alumno_nombre}</td>
-                  <td className="px-4 py-3 text-sm text-gray-500">{a.nombre_turno || '—'}</td>
+                  <td className="px-4 py-3 text-sm font-medium text-[#172033]">{a.alumno_nombre}</td>
+                  <td className="px-4 py-3 text-sm text-slate-500">{a.nombre_turno || '—'}</td>
                   <td className="px-4 py-3 text-center">
                     {a.estado_pago === 'pagado'
                       ? <span className="px-2 py-0.5 bg-green-100 text-green-800 rounded-full text-xs font-medium">Habilitado</span>
@@ -207,16 +207,16 @@ function EntrenadorProgreso() {
       </div>
 
       {showFormModal && selectedAlumno && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
-            <h3 className="text-lg font-bold text-gray-800 mb-4">Registrar Evaluación</h3>
+        <div className="fixed inset-0 bg-[#071A2B]/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
+          <div className="bg-white rounded-2xl shadow-modal p-6 w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto animate-scale-in">
+            <h3 className="text-lg font-bold text-[#172033] mb-4">Registrar Evaluación</h3>
             <div className="bg-gray-50 rounded-lg p-3 mb-4">
-              <p className="text-sm font-medium text-gray-800">{selectedAlumno.alumno_nombre}</p>
-              <p className="text-xs text-gray-500">{selectedAlumno.nombre_turno || 'Sin turno'}</p>
+              <p className="text-sm font-medium text-[#172033]">{selectedAlumno.alumno_nombre}</p>
+              <p className="text-xs text-slate-500">{selectedAlumno.nombre_turno || 'Sin turno'}</p>
             </div>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-600 mb-1">Fecha de evaluación</label>
+                <label className="block text-sm font-medium text-slate-500 mb-1">Fecha de evaluación</label>
                 <input type="date" value={form.fecha_evaluacion}
                   onChange={(e) => handleInputChange('fecha_evaluacion', e.target.value)}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" required />
@@ -225,14 +225,14 @@ function EntrenadorProgreso() {
               <div className="grid grid-cols-2 gap-3">
                 {CAMPOS.map(({ key, label }) => (
                   <div key={key}>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">{label} (1-10)</label>
+                    <label className="block text-xs font-medium text-slate-500 mb-1">{label} (1-10)</label>
                     <input type="number" min="1" max="10" value={form[key]}
                       onChange={(e) => handleInputChange(key, e.target.value)}
                       className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
                   </div>
                 ))}
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Peso (kg)</label>
+                  <label className="block text-xs font-medium text-slate-500 mb-1">Peso (kg)</label>
                   <input type="number" step="0.1" min="0" value={form.peso}
                     onChange={(e) => handleInputChange('peso', e.target.value)}
                     className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
@@ -251,7 +251,7 @@ function EntrenadorProgreso() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-600 mb-1">Nivel (manual, opcional)</label>
+                <label className="block text-sm font-medium text-slate-500 mb-1">Nivel (manual, opcional)</label>
                 <select value={form.nivel} onChange={(e) => handleInputChange('nivel', e.target.value)}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
                   <option value="">Automático según promedio</option>
@@ -262,14 +262,14 @@ function EntrenadorProgreso() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-600 mb-1">Observación</label>
+                <label className="block text-sm font-medium text-slate-500 mb-1">Observación</label>
                 <textarea value={form.observacion} onChange={(e) => handleInputChange('observacion', e.target.value)}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" rows="2" />
               </div>
 
               <div className="flex justify-end gap-3 pt-2">
                 <button type="button" onClick={() => setShowFormModal(false)}
-                  className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800">Cancelar</button>
+                  className="px-4 py-2 text-sm text-slate-500 hover:text-[#172033]">Cancelar</button>
                 <button type="submit"
                   className="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-700">
                   Guardar Evaluación
@@ -281,26 +281,26 @@ function EntrenadorProgreso() {
       )}
 
       {showHistorialModal && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-2xl mx-4 max-h-[80vh] flex flex-col">
+        <div className="fixed inset-0 bg-[#071A2B]/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
+          <div className="bg-white rounded-2xl shadow-modal p-6 w-full max-w-2xl mx-4 max-h-[80vh] flex flex-col animate-scale-in">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h3 className="text-lg font-bold text-gray-800">Historial</h3>
-                <p className="text-sm text-gray-500">{historialNombre}</p>
+                <h3 className="text-lg font-bold text-[#172033]">Historial</h3>
+                <p className="text-sm text-slate-500">{historialNombre}</p>
               </div>
-              <button onClick={() => setShowHistorialModal(false)} className="text-gray-400 hover:text-gray-600 text-xl">&times;</button>
+              <button onClick={() => setShowHistorialModal(false)} className="text-gray-400 hover:text-slate-500 text-xl">&times;</button>
             </div>
             {historialLoading ? (
               <div className="flex justify-center py-8">
                 <div className="w-8 h-8 border-4 border-invictus-200 border-t-invictus-600 rounded-full animate-spin" />
               </div>
             ) : historialData.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">Sin evaluaciones</div>
+              <div className="text-center py-8 text-slate-500">Sin evaluaciones</div>
             ) : (
               <div className="overflow-y-auto flex-1">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="text-left text-gray-500 border-b border-gray-100">
+                    <tr className="text-left text-slate-500 border-b border-gray-100">
                       <th className="px-3 py-2 font-medium">Fecha</th>
                       <th className="px-3 py-2 font-medium text-center">Nivel</th>
                       <th className="px-3 py-2 font-medium text-center">Prom.</th>
@@ -313,7 +313,7 @@ function EntrenadorProgreso() {
                         <td className="px-3 py-2 text-gray-700">{formatDate(h.fecha_evaluacion)}</td>
                         <td className="px-3 py-2 text-center">{getNivelBadge(h.nivel)}</td>
                         <td className="px-3 py-2 text-center font-semibold text-gray-700">{h.promedio ?? '—'}</td>
-                        <td className="px-3 py-2 text-gray-500 max-w-[200px] truncate" title={h.observacion}>{h.observacion || '—'}</td>
+                        <td className="px-3 py-2 text-slate-500 max-w-[200px] truncate" title={h.observacion}>{h.observacion || '—'}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -322,7 +322,7 @@ function EntrenadorProgreso() {
             )}
             <div className="flex justify-end mt-4 pt-3 border-t border-gray-100">
               <button onClick={() => setShowHistorialModal(false)}
-                className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 border border-gray-300 rounded-lg">
+                className="px-4 py-2 text-sm text-slate-500 hover:text-[#172033] border border-gray-300 rounded-lg">
                 Cerrar
               </button>
             </div>

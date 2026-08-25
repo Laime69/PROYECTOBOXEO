@@ -13,9 +13,9 @@ function ClasesHoyCard({ clases_hoy, clases_hoy_detalles = [], dia_nombre = '', 
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow">
+      <div className="bg-white rounded-xl shadow-card border border-gray-200/70 transition-all duration-200 p-6 transition-all duration-200 hover:shadow-card-hover">
         <div className="flex items-center justify-between mb-1">
-          <p className="text-sm text-gray-500 font-medium">Clases Hoy</p>
+          <p className="text-sm text-slate-500 font-medium">Clases Hoy</p>
           {dia_nombre && <span className="text-xs text-gray-400 capitalize">{dia_nombre}</span>}
         </div>
 
@@ -30,11 +30,11 @@ function ClasesHoyCard({ clases_hoy, clases_hoy_detalles = [], dia_nombre = '', 
         ) : (
           <>
             <div className="flex items-baseline gap-2 mt-2">
-              <p className="text-3xl font-bold text-gray-800">{activas}/{total}</p>
+              <p className="text-3xl font-bold text-[#172033]">{activas}/{total}</p>
               {esSparring ? (
                 <span className="px-2 py-0.5 bg-orange-100 text-orange-700 text-xs font-semibold rounded-full">Sparring</span>
               ) : (
-                <span className="text-sm text-gray-500">activas</span>
+                <span className="text-sm text-slate-500">activas</span>
               )}
             </div>
 
@@ -46,7 +46,7 @@ function ClasesHoyCard({ clases_hoy, clases_hoy_detalles = [], dia_nombre = '', 
                       <span>{iconosTurno[c.turno] || '🕐'}</span>
                       <span className="font-medium text-gray-700">{nombresTurno[c.turno] || c.turno}</span>
                       <span className="text-gray-400">·</span>
-                      <span className="text-gray-500">{String(c.hora_inicio).slice(0,5)} - {String(c.hora_fin).slice(0,5)}</span>
+                      <span className="text-slate-500">{String(c.hora_inicio).slice(0,5)} - {String(c.hora_fin).slice(0,5)}</span>
                     </div>
                     <div className="flex items-center gap-2">
                       {c.entrenador_nombre && (
@@ -68,13 +68,13 @@ function ClasesHoyCard({ clases_hoy, clases_hoy_detalles = [], dia_nombre = '', 
         )}
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow">
+      <div className="bg-white rounded-xl shadow-card border border-gray-200/70 transition-all duration-200 p-6 transition-all duration-200 hover:shadow-card-hover">
         <div className="flex items-center justify-between mb-1">
-          <p className="text-sm text-gray-500 font-medium">Horarios Semana</p>
+          <p className="text-sm text-slate-500 font-medium">Horarios Semana</p>
         </div>
         <div className="flex items-baseline gap-2 mt-2">
-          <p className="text-3xl font-bold text-gray-800">{semanaActivos}/{semanaTotal}</p>
-          <span className="text-sm text-gray-500">activos</span>
+          <p className="text-3xl font-bold text-[#172033]">{semanaActivos}/{semanaTotal}</p>
+          <span className="text-sm text-slate-500">activos</span>
         </div>
         <div className="mt-4">
           <div className="w-full bg-gray-100 rounded-full h-2.5">

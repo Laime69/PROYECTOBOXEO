@@ -32,7 +32,7 @@ function Perfil() {
       vencido: 'bg-red-100 text-red-800',
     };
     const label = estado === 'pagado' ? 'Pagado' : estado === 'vencido' ? 'Vencido' : 'Pendiente';
-    return <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${styles[estado] || 'bg-gray-100 text-gray-800'}`}>{label}</span>;
+    return <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${styles[estado] || 'bg-gray-100 text-[#172033]'}`}>{label}</span>;
   };
 
   if (loading) {
@@ -55,19 +55,19 @@ function Perfil() {
   return (
     <div>
       <div className="mb-8">
-        <h2 className="text-2xl font-bold text-gray-800">Mi Perfil</h2>
-        <p className="text-gray-500 mt-1">Información personal del deportista</p>
+        <h2 className="text-2xl font-bold text-[#172033]">Mi Perfil</h2>
+        <p className="text-slate-500 mt-1">Información personal del deportista</p>
       </div>
 
       {error && <div className="mb-4 bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-700">{error}</div>}
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+      <div className="bg-white rounded-xl shadow-card border border-gray-200/70 transition-all duration-200 overflow-hidden">
         <div className="p-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {fields.map((f) => (
               <div key={f.label}>
-                <p className="text-sm text-gray-500 font-medium">{f.label}</p>
-                <p className="text-sm text-gray-800 mt-1">{f.value}</p>
+                <p className="text-sm text-slate-500 font-medium">{f.label}</p>
+                <p className="text-sm text-[#172033] mt-1">{f.value}</p>
               </div>
             ))}
           </div>

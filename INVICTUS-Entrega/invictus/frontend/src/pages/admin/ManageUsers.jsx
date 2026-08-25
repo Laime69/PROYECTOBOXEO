@@ -1,47 +1,58 @@
 import { useState, useEffect } from 'react';
+import { useTituloPagina } from '../../hooks/useTituloPagina';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { getUsers, updateUser, deleteUser } from '../../services/usuarioService';
 import { asignarTurno, cambiarTurno, getHorarioActual } from '../../services/alumnoHorarioService';
 import UserDetailModal from '../../components/UserDetailModal';
 import UserRoleFields from '../../components/UserRoleFields';
+import Paginacion from '../../components/Paginacion';
 
-const roleStyles = {
-  SuperAdmin: 'bg-red-100 text-red-800',
-  Administrador: 'bg-purple-100 text-purple-800',
-  Recepcionista: 'bg-teal-100 text-teal-800',
-  Entrenador: 'bg-green-100 text-green-800',
-  Alumno: 'bg-blue-100 text-blue-800',
+const roleBadges = {
+  SuperAdmin: 'bg-rose-50 text-rose-700 ring-rose-200',
+  Administrador: 'bg-violet-50 text-violet-700 ring-violet-200',
+  Recepcionista: 'bg-cyan-50 text-cyan-700 ring-cyan-200',
+  Entrenador: 'bg-emerald-50 text-emerald-700 ring-emerald-200',
+  Alumno: 'bg-blue-50 text-blue-700 ring-blue-200',
 };
 
-const pagoStyles = {
-  pagado: 'bg-green-100 text-green-800',
-  pendiente: 'bg-yellow-100 text-yellow-800',
-  vencido: 'bg-red-100 text-red-800',
+const roleAvatares = {
+  SuperAdmin: 'bg-rose-500',
+  Administrador: 'bg-violet-500',
+  Recepcionista: 'bg-cyan-500',
+  Entrenador: 'bg-invictus-600',
+  Alumno: 'bg-blue-500',
 };
 
-const pagoLabels = {
-  pagado: 'Pagado',
-  pendiente: 'Pendiente',
-  vencido: 'Vencido',
+const roleLabels = {
+  SuperAdmin: 'Súper Admin',
+  Administrador: 'Administrador',
+  Recepcionista: 'Recepción',
+  Entrenador: 'Entrenador',
+  Alumno: 'Alumno',
 };
 
-  const allRoleOptions = [
-    { value: 'Alumno', label: 'Alumno' },
-    { value: 'Entrenador', label: 'Entrenador' },
-    { value: 'Recepcionista', label: 'Recepcionista' },
-    { value: 'Administrador', label: 'Administrador' },
-    { value: 'SuperAdmin', label: 'Súper Admin' },
-  ];
+const allRoleOptions = [
+  { value: 'Alumno', label: 'Alumno' },
+  { value: 'Entrenador', label: 'Entrenador' },
+  { value: 'Recepcionista', label: 'Recepcionista' },
+  { value: 'Administrador', label: 'Administrador' },
+  { value: 'SuperAdmin', label: 'Súper Admin' },
+];
 
 function ManageUsers() {
+  useTituloPagina('Usuarios');
   const { user } = useAuth();
+  const navigate = useNavigate();
   const isSuperAdmin = user?.rol === 'SuperAdmin';
   const editRoleOptions = isSuperAdmin
     ? allRoleOptions
     : allRoleOptions.filter(opt => !['SuperAdmin', 'Administrador'].includes(opt.value));
+
   const [usuarios, setUsuarios] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filtroRol, setFiltroRol] = useState('');
+  const [busqueda, setBusqueda] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [editUser, setEditUser] = useState(null);
@@ -49,7 +60,23 @@ function ManageUsers() {
   const [turnoAsignar, setTurnoAsignar] = useState('');
   const [turnoError, setTurnoError] = useState('');
   const [viewUserId, setViewUserId] = useState(null);
+  const [menuAbierto, setMenuAbierto] = useState(null);
+  const [pagina, setPagina] = useState(1);
+  const [porPagina, setPorPagina] = useState(10);
 
+  useEffect(() => {
+    if (!error) return undefined;
+    const t = setTimeout(() => setError(''), 4000);
+    return () => clearTimeout(t);
+  }, [error]);
+
+  useEffect(() => {
+    if (!success) return undefined;
+    const t = setTimeout(() => setSuccess(''), 4000);
+    return () => clearTimeout(t);
+  }, [success]);
+
+  // autodismiss-ok
   const fetchUsers = async () => {
     setLoading(true);
     setError('');
@@ -66,6 +93,27 @@ function ManageUsers() {
   useEffect(() => {
     fetchUsers();
   }, [filtroRol]);
+
+  useEffect(() => {
+    setPagina(1);
+    setMenuAbierto(null);
+  }, [busqueda, filtroRol]);
+
+  /* ── Estadísticas de cabecera ── */
+  const totalUsuarios = usuarios.length;
+  const totalActivos = usuarios.filter((u) => u.estado === 'activo').length;
+  const totalEntrenadores = usuarios.filter((u) => u.rol === 'Entrenador').length;
+  const totalAlumnos = usuarios.filter((u) => u.rol === 'Alumno').length;
+
+  const usuariosFiltrados = usuarios.filter((u) => {
+    if (!busqueda.trim()) return true;
+    const texto = `${u.nombre || ''} ${u.correo || ''} ${u.ci || ''}`.toLowerCase();
+    return texto.includes(busqueda.trim().toLowerCase());
+  });
+  const visibles = usuariosFiltrados.slice((pagina - 1) * porPagina, pagina * porPagina);
+
+  const iniciales = (nombre) =>
+    (nombre || '?').split(' ').map((w) => w[0]).filter(Boolean).slice(0, 2).join('').toUpperCase();
 
   const openEdit = async (user) => {
     setEditUser(user);
@@ -237,6 +285,17 @@ function ManageUsers() {
     }
   };
 
+  const toggleEstado = async (u) => {
+    const nuevo = u.estado === 'activo' ? 'inactivo' : 'activo';
+    try {
+      await updateUser(u.id_usuario, { estado: nuevo });
+      setSuccess(`"${u.nombre}" ahora está ${nuevo}`);
+      fetchUsers();
+    } catch {
+      setError('Error al cambiar estado');
+    }
+  };
+
   const handleDelete = async (id, nombre, rol) => {
     if (id === user?.id_usuario) {
       setError('No puedes eliminarte a ti mismo');
@@ -257,163 +316,211 @@ function ManageUsers() {
     }
   };
 
-  const getRoleBadge = (rol) => {
-    return `px-2 py-0.5 rounded-full text-xs font-medium ${roleStyles[rol] || 'bg-gray-100 text-gray-800'}`;
-  };
+  const puedeEliminar = (u) =>
+    u.id_usuario !== user?.id && u.rol !== 'SuperAdmin' && (isSuperAdmin || u.rol !== 'Administrador');
 
-  const getPagoBadge = (estado) => {
-    return `px-2 py-0.5 rounded-full text-xs font-medium ${pagoStyles[estado] || 'bg-gray-100 text-gray-800'}`;
-  };
-
-  const formatDate = (date) => {
-    if (!date) return '—';
-    return new Date(date).toLocaleDateString('es-ES', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-    });
-  };
-
-  const getRoleDisplay = (rol) => {
-    const labels = {
-      SuperAdmin: 'Súper Admin',
-      Administrador: 'Administrador',
-      Recepcionista: 'Recepcionista',
-      Entrenador: 'Entrenador',
-      Alumno: 'Alumno',
-    };
-    return labels[rol] || rol;
-  };
-
-  const availableRoleFilters = isSuperAdmin
-    ? ['', 'SuperAdmin', 'Administrador', 'Recepcionista', 'Entrenador', 'Alumno']
-    : ['', 'Administrador', 'Recepcionista', 'Entrenador', 'Alumno'];
-
-  const filterLabels = {
-    '': 'Todos',
-    SuperAdmin: 'Súper Admins',
-    Administrador: 'Administradores',
-    Recepcionista: 'Recepcionistas',
-    Entrenador: 'Entrenadores',
-    Alumno: 'Alumnos',
-  };
+  const itemMenu = 'w-full flex items-center gap-2.5 px-4 py-2 text-sm text-left transition-colors';
 
   return (
     <div>
-      <div className="mb-8">
-        <h2 className="text-2xl font-bold text-gray-800">Gestionar Usuarios</h2>
-        <p className="text-gray-500 mt-1">Administra los usuarios del sistema</p>
+      {/* ── Cabecera de gestión ── */}
+      <div className="mb-5">
+        <h2 className="text-2xl font-bold text-[#172033]">Usuarios</h2>
+        <p className="text-slate-500 mt-0.5">Gestiona administradores, entrenadores y alumnos</p>
+
+        <div className="flex flex-wrap gap-2 mt-4">
+          {[
+            { etiqueta: 'usuarios', valor: totalUsuarios, color: 'text-[#172033]' },
+            { etiqueta: 'activos', valor: totalActivos, color: 'text-green-600' },
+            { etiqueta: 'entrenadores', valor: totalEntrenadores, color: 'text-emerald-600' },
+            { etiqueta: 'alumnos', valor: totalAlumnos, color: 'text-blue-600' },
+          ].map((s, i) => (
+            <span key={i} className="inline-flex items-center gap-1.5 bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-xs">
+              <strong className={`text-sm font-bold ${s.color}`}>{s.valor}</strong>
+              <span className="text-slate-500">{s.etiqueta}</span>
+            </span>
+          ))}
+        </div>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100">
-        <div className="p-4 border-b border-gray-100 flex items-center gap-4">
-          <label className="text-sm font-medium text-gray-700">Filtrar por rol:</label>
-          <select
-            value={filtroRol}
-            onChange={(e) => setFiltroRol(e.target.value)}
-            className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-invictus-500"
-          >
-            {availableRoleFilters.map((val) => (
-              <option key={val} value={val}>{filterLabels[val]}</option>
-            ))}
-          </select>
+      {/* ── Barra de herramientas ── */}
+      <div className="bg-white rounded-xl shadow-card border border-gray-200/70 transition-all duration-200 p-3 mb-5 flex flex-wrap items-center gap-2">
+        <div className="relative flex-1 min-w-[220px]">
+          <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+          <input
+            type="text"
+            value={busqueda}
+            onChange={(e) => setBusqueda(e.target.value)}
+            placeholder="Buscar por nombre, CI o correo..."
+            className="w-full border border-gray-300 rounded-lg pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-invictus-500"
+          />
         </div>
 
-        {error && (
-          <div className="mx-4 mt-4 bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-700">
-            {error}
-          </div>
-        )}
+        <select
+          value={filtroRol}
+          onChange={(e) => setFiltroRol(e.target.value)}
+          className={`border rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-invictus-500 ${
+            filtroRol ? 'border-invictus-400 text-invictus-700 font-medium' : 'border-gray-300 text-slate-600'
+          }`}
+        >
+          <option value="">Todos los roles</option>
+          {(isSuperAdmin
+            ? ['SuperAdmin', 'Administrador', 'Recepcionista', 'Entrenador', 'Alumno']
+            : ['Administrador', 'Recepcionista', 'Entrenador', 'Alumno']
+          ).map((r) => (
+            <option key={r} value={r}>{roleLabels[r]}s</option>
+          ))}
+        </select>
 
-        {success && (
-          <div className="mx-4 mt-4 bg-green-50 border border-green-200 rounded-lg px-4 py-3 text-sm text-green-700">
-            {success}
-          </div>
-        )}
+        <button
+          onClick={() => navigate('/admin/register')}
+          className="inline-flex items-center gap-1.5 bg-invictus-600 hover:bg-invictus-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors whitespace-nowrap"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
+          Nuevo usuario
+        </button>
+      </div>
 
+      {error && <div className="mb-4 bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-700">{error}</div>}
+      {success && <div className="mb-4 bg-green-50 border border-green-200 rounded-lg px-4 py-3 text-sm text-green-700">{success}</div>}
+
+      {/* ── Tabla ── */}
+      <div className="bg-white rounded-xl shadow-card border border-gray-200/70 transition-all duration-200 overflow-hidden">
         {loading ? (
           <div className="flex justify-center py-12">
             <div className="w-8 h-8 border-4 border-invictus-200 border-t-invictus-600 rounded-full animate-spin" />
           </div>
-        ) : usuarios.length === 0 ? (
-          <div className="text-center py-12 text-gray-500">
-            No hay usuarios registrados
+        ) : visibles.length === 0 ? (
+          <div className="text-center py-12">
+            <p className="text-slate-500 mb-4">
+              {busqueda || filtroRol ? 'No hay usuarios que coincidan con la búsqueda' : 'Aún no hay usuarios registrados'}
+            </p>
+            {!busqueda && !filtroRol && (
+              <button onClick={() => navigate('/admin/register')}
+                className="inline-flex items-center gap-2 bg-invictus-600 hover:bg-invictus-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                Registrar primer usuario
+              </button>
+            )}
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <>
             <table className="w-full">
               <thead>
-                <tr className="text-left text-sm text-gray-500 border-b border-gray-100">
-                  <th className="px-4 py-3 font-medium">Nombre</th>
-                  <th className="px-4 py-3 font-medium">CI</th>
-                  <th className="px-4 py-3 font-medium">Celular</th>
-                  <th className="px-4 py-3 font-medium">Correo</th>
-                  <th className="px-4 py-3 font-medium">Rol</th>
-                  <th className="px-4 py-3 font-medium">Estado</th>
-                  <th className="px-4 py-3 font-medium text-right">Acciones</th>
+                <tr className="text-left text-xs uppercase tracking-wider text-slate-400 border-b border-gray-200 bg-slate-50">
+                  <th className="px-5 py-3 font-semibold">Usuario</th>
+                  <th className="px-4 py-3 font-semibold">Rol</th>
+                  <th className="px-4 py-3 font-semibold">Estado</th>
+                  <th className="px-4 py-3 font-semibold text-right">Acciones</th>
                 </tr>
               </thead>
               <tbody>
-                {usuarios.map((u) => (
-                  <tr key={u.id_usuario} className="border-b border-gray-50 hover:bg-gray-50">
-                    <td className="px-4 py-3 text-sm font-medium text-gray-800">{u.nombre}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600">{u.ci || '—'}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600">{u.celular || '—'}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600">{u.correo}</td>
-                    <td className="px-4 py-3">
-                      <span className={getRoleBadge(u.rol)}>{getRoleDisplay(u.rol)}</span>
+                {visibles.map((u) => (
+                  <tr key={u.id_usuario} className="border-b border-gray-50 hover:bg-slate-50/60 transition-colors group">
+                    <td className="px-5 py-3">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-9 h-9 rounded-full ${roleAvatares[u.rol] || 'bg-slate-400'} flex items-center justify-center text-xs font-bold text-white shrink-0`}>
+                          {iniciales(u.nombre)}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-[#172033] truncate">{u.nombre}</p>
+                          <p className="text-xs text-slate-400 truncate">{u.correo}</p>
+                        </div>
+                      </div>
                     </td>
                     <td className="px-4 py-3">
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${u.estado === 'activo' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
-                        {u.estado === 'activo' ? 'Activo' : 'Inactivo'}
+                      <span className={`inline-flex px-2.5 py-1 rounded-md text-xs font-semibold ring-1 ring-inset ${roleBadges[u.rol] || 'bg-slate-50 text-slate-600 ring-slate-200'}`}>
+                        {roleLabels[u.rol] || u.rol}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <button
-                          onClick={() => setViewUserId(u.id_usuario)}
-                          className="text-sm text-blue-600 hover:text-blue-800 font-medium"
-                        >
-                          Ver
-                        </button>
-                        <button
-                          onClick={() => openEdit(u)}
-                          className="text-sm text-invictus-600 hover:text-invictus-800 font-medium"
-                        >
-                          Editar
-                        </button>
-                        {u.rol === 'Alumno' && u.estado_pago !== 'pagado' && (
-                          <button
-                            onClick={() => handleQuickPay(u)}
-                            className="text-sm text-green-600 hover:text-green-800 font-medium"
-                          >
-                            Pagado
-                          </button>
-                        )}
-                        {u.id_usuario !== user?.id && u.rol !== 'SuperAdmin' && (isSuperAdmin || u.rol !== 'Administrador') && (
-                          <button
-                            onClick={() => handleDelete(u.id_usuario, u.nombre, u.rol)}
-                            className="text-sm text-red-600 hover:text-red-800 font-medium"
-                          >
-                            Eliminar
-                          </button>
-                        )}
-                      </div>
+                    <td className="px-4 py-3">
+                      <span className="inline-flex items-center gap-1.5 text-sm">
+                        <span className={`w-2 h-2 rounded-full ${u.estado === 'activo' ? 'bg-green-500' : 'bg-slate-300'}`} />
+                        <span className={u.estado === 'activo' ? 'text-green-700 font-medium' : 'text-slate-400'}>
+                          {u.estado === 'activo' ? 'Activo' : 'Inactivo'}
+                        </span>
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-right relative">
+                      <button
+                        onClick={() => setMenuAbierto(menuAbierto === u.id_usuario ? null : u.id_usuario)}
+                        aria-label={`Acciones de ${u.nombre}`}
+                        aria-haspopup="menu"
+                        aria-expanded={menuAbierto === u.id_usuario}
+                        className={`p-1.5 rounded-lg transition-colors ${
+                          menuAbierto === u.id_usuario ? 'bg-slate-100 text-slate-700' : 'text-slate-400 hover:bg-slate-100 hover:text-slate-700'
+                        }`}
+                        title="Más acciones"
+                      >
+                        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                          <circle cx="5" cy="12" r="1.8" /><circle cx="12" cy="12" r="1.8" /><circle cx="19" cy="12" r="1.8" />
+                        </svg>
+                      </button>
+
+                      {menuAbierto === u.id_usuario && (
+                        <>
+                          <div className="fixed inset-0 z-40" onClick={() => setMenuAbierto(null)} />
+                          <div className="absolute right-4 top-full mt-1 w-52 bg-white rounded-xl shadow-xl border border-gray-100 py-1.5 z-50 text-left">
+                            <button onClick={() => { setViewUserId(u.id_usuario); setMenuAbierto(null); }}
+                              className={`${itemMenu} hover:bg-slate-50 text-[#172033]`}>
+                              <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                              Ver perfil
+                            </button>
+                            <button onClick={() => { openEdit(u); setMenuAbierto(null); }}
+                              className={`${itemMenu} hover:bg-slate-50 text-[#172033]`}>
+                              <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                              Editar usuario
+                            </button>
+                            {u.rol === 'Alumno' && u.estado_pago !== 'pagado' && (
+                              <button onClick={() => { handleQuickPay(u); setMenuAbierto(null); }}
+                                className={`${itemMenu} hover:bg-green-50 text-green-700`}>
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                Marcar pagado
+                              </button>
+                            )}
+                            <button onClick={() => { toggleEstado(u); setMenuAbierto(null); }}
+                              className={`${itemMenu} hover:bg-slate-50 text-[#172033]`}>
+                              <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={u.estado === 'activo' ? 'M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636' : 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z'} /></svg>
+                              {u.estado === 'activo' ? 'Desactivar' : 'Activar'}
+                            </button>
+                            {puedeEliminar(u) && (
+                              <>
+                                <div className="my-1 border-t border-gray-100" />
+                                <button onClick={() => { handleDelete(u.id_usuario, u.nombre, u.rol); setMenuAbierto(null); }}
+                                  className={`${itemMenu} hover:bg-red-50 text-red-600`}>
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                  Eliminar
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        </>
+                      )}
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
-          </div>
+
+            <Paginacion
+              total={usuariosFiltrados.length}
+              pagina={pagina}
+              porPagina={porPagina}
+              setPagina={setPagina}
+              setPorPagina={setPorPagina}
+            />
+          </>
         )}
       </div>
 
       {editUser && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto">
-            <h3 className="text-lg font-bold text-gray-800 mb-4">
-              Editar Usuario
-            </h3>
+        <div className="fixed inset-0 bg-[#071A2B]/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
+          <div className="bg-white rounded-2xl shadow-modal max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto animate-scale-in">
+            <h3 className="text-lg font-bold text-[#172033] mb-4">Editar Usuario</h3>
             <form onSubmit={handleEditSubmit} className="space-y-4">
               <UserRoleFields
                 mode="edit"
@@ -431,7 +538,7 @@ function ManageUsers() {
                 <button
                   type="button"
                   onClick={closeEdit}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                  className="px-4 py-2 text-sm font-medium text-slate-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
                 >
                   Cancelar
                 </button>

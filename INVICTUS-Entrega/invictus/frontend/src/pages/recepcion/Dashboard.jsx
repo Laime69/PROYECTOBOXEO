@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useContadorAnimado } from '../../hooks/useContadorAnimado';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { getDashboardStats } from '../../services/dashboardService';
@@ -35,8 +36,8 @@ function RecepcionDashboard() {
   return (
     <div>
       <div className="mb-8">
-        <h2 className="text-2xl font-bold text-gray-800">Panel de Recepción / Cajero</h2>
-        <p className="text-gray-500 mt-1">
+        <h2 className="text-2xl font-bold text-[#172033]">Panel de Recepción / Cajero</h2>
+        <p className="text-slate-500 mt-1">
           Bienvenido, {user?.nombre}. Gestiona alumnos y pagos desde aquí.
         </p>
       </div>
@@ -48,9 +49,9 @@ function RecepcionDashboard() {
       ) : (
         <>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-            <StatCard title="Total Alumnos" value={stats?.total_alumnos ?? 0} icon="🏋️" color="bg-blue-500" />
-            <StatCard title="Alumnos Pagados" value={stats?.alumnos_pagados ?? 0} icon="✅" color="bg-green-500" />
-            <StatCard title="Ingresos Mes" value={`Bs ${(stats?.ingresos_mes ?? 0).toLocaleString()}`} icon="💰" color="bg-amber-500" />
+            <StatCard title="Total Alumnos" value={stats?.total_alumnos ?? 0} icon="🏋️" color="bg-blue-50 text-blue-600" />
+            <StatCard title="Alumnos Pagados" value={stats?.alumnos_pagados ?? 0} icon="✅" color="bg-emerald-50 text-emerald-600" />
+            <StatCard title="Ingresos Mes" value={`Bs ${(stats?.ingresos_mes ?? 0).toLocaleString()}`} icon="💰" color="bg-amber-50 text-amber-600" />
           </div>
 
           <div className="mb-8">
@@ -62,19 +63,19 @@ function RecepcionDashboard() {
             />
           </div>
 
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">Accesos Rápidos</h3>
+          <h3 className="text-lg font-semibold text-[#172033] mb-4">Accesos Rápidos</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {quickLinks.map((link) => (
               <button
                 key={link.path}
                 onClick={() => navigate(link.path)}
-                className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 hover:shadow-md transition-all text-left hover:-translate-y-0.5"
+                className="bg-white rounded-xl shadow-card border border-gray-200/70 transition-all duration-200 p-5 hover:shadow-md transition-all text-left hover:-translate-y-0.5"
               >
                 <div className={`w-10 h-10 ${link.color} rounded-lg flex items-center justify-center text-xl mb-3`}>
                   {link.icon}
                 </div>
-                <h4 className="font-semibold text-gray-800 text-sm">{link.label}</h4>
-                <p className="text-xs text-gray-500 mt-0.5">{link.desc}</p>
+                <h4 className="font-semibold text-[#172033] text-sm">{link.label}</h4>
+                <p className="text-xs text-slate-500 mt-0.5">{link.desc}</p>
               </button>
             ))}
           </div>
@@ -85,14 +86,15 @@ function RecepcionDashboard() {
 }
 
 function StatCard({ title, value, icon, color }) {
+  const valorAnimado = useContadorAnimado(value);
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow">
+    <div className="bg-white rounded-xl shadow-card border border-gray-200/70 transition-all duration-200 p-6 transition-all duration-200 hover:shadow-card-hover">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm text-gray-500 font-medium">{title}</p>
-          <p className="text-2xl font-bold text-gray-800 mt-1">{value}</p>
+          <p className="text-sm text-slate-500 font-medium">{title}</p>
+          <p className="text-2xl font-bold text-[#172033] mt-1 tabular-nums">{valorAnimado}</p>
         </div>
-        <div className={`w-12 h-12 ${color} rounded-lg flex items-center justify-center text-2xl`}>
+        <div className={`w-12 h-12 ${color} rounded-xl ring-1 ring-inset ring-black/5 flex items-center justify-center text-xl`}>
           {icon}
         </div>
       </div>

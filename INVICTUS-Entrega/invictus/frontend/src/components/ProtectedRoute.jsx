@@ -26,10 +26,10 @@ function ProtectedRoute({ children, rol, roles }) {
 
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center p-8 bg-white rounded-xl shadow-sm border border-gray-100 max-w-md">
+        <div className="text-center p-8 bg-white rounded-xl shadow-card border border-gray-200/70 transition-all duration-200 max-w-md">
           <div className="text-4xl mb-4">🚫</div>
-          <h2 className="text-xl font-bold text-gray-800 mb-2">Acceso denegado</h2>
-          <p className="text-gray-500 mb-4">No tiene permiso para acceder a esta sección.</p>
+          <h2 className="text-xl font-bold text-[#172033] mb-2">Acceso denegado</h2>
+          <p className="text-slate-500 mb-4">No tiene permiso para acceder a esta sección.</p>
           <button
             onClick={() => navigate(redirectPath)}
             className="bg-invictus-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-invictus-700"

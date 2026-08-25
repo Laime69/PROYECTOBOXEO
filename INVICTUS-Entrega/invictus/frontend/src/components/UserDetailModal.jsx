@@ -87,7 +87,7 @@ function UserDetailModal({ userId, onClose }) {
       Entrenador: 'bg-green-100 text-green-800',
       Alumno: 'bg-blue-100 text-blue-800',
     };
-    return `px-2.5 py-0.5 rounded-full text-xs font-medium ${styles[rol] || 'bg-gray-100 text-gray-800'}`;
+    return `px-2.5 py-0.5 rounded-full text-xs font-medium ${styles[rol] || 'bg-gray-100 text-[#172033]'}`;
   };
 
   const getRoleLabel = (rol) => {
@@ -104,13 +104,13 @@ function UserDetailModal({ userId, onClose }) {
   const getEstadoBadge = (estado) => {
     const styles = {
       activo: 'bg-green-100 text-green-800',
-      inactivo: 'bg-gray-100 text-gray-800',
+      inactivo: 'bg-gray-100 text-[#172033]',
       cesado: 'bg-red-100 text-red-800',
       pagado: 'bg-green-100 text-green-800',
       pendiente: 'bg-yellow-100 text-yellow-800',
       vencido: 'bg-red-100 text-red-800',
     };
-    return `px-2.5 py-0.5 rounded-full text-xs font-medium ${styles[estado] || 'bg-gray-100 text-gray-800'}`;
+    return `px-2.5 py-0.5 rounded-full text-xs font-medium ${styles[estado] || 'bg-gray-100 text-[#172033]'}`;
   };
 
   const canSeeSection = (section) => {
@@ -136,14 +136,14 @@ function UserDetailModal({ userId, onClose }) {
 
   const getInfoRow = (label, value) => (
     <div className="flex flex-col sm:flex-row sm:items-center py-2 border-b border-gray-50 last:border-0">
-      <span className="text-xs font-medium text-gray-500 sm:w-40 mb-1 sm:mb-0">{label}</span>
-      <span className="text-sm text-gray-800">{value || '—'}</span>
+      <span className="text-xs font-medium text-slate-500 sm:w-40 mb-1 sm:mb-0">{label}</span>
+      <span className="text-sm text-[#172033]">{value || '—'}</span>
     </div>
   );
 
   const getSkillBar = (label, value) => (
     <div className="flex items-center gap-3 py-1.5">
-      <span className="text-xs font-medium text-gray-600 w-24">{label}</span>
+      <span className="text-xs font-medium text-slate-500 w-24">{label}</span>
       <div className="flex-1 h-2.5 bg-gray-100 rounded-full overflow-hidden">
         <div
           className="h-full rounded-full transition-all"
@@ -182,45 +182,45 @@ function UserDetailModal({ userId, onClose }) {
                     {usuario.nombre?.charAt(0).toUpperCase()}
                   </div>
                   <div>
-                    <h3 className="text-lg font-bold text-gray-800">{usuario.nombre}</h3>
+                    <h3 className="text-lg font-bold text-[#172033]">{usuario.nombre}</h3>
                     <div className="flex items-center gap-2 mt-0.5">
                       <span className={getRoleBadge(usuario.rol)}>{getRoleLabel(usuario.rol)}</span>
                       <span className={getEstadoBadge(usuario.estado || 'activo')}>{usuario.estado === 'activo' ? 'Activo' : usuario.estado === 'inactivo' ? 'Inactivo' : 'Cesado'}</span>
                     </div>
                   </div>
                 </div>
-                <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
+                <button onClick={onClose} className="text-gray-400 hover:text-slate-500 text-xl leading-none">&times;</button>
               </div>
             </div>
 
             <div className="flex border-b border-gray-100 px-6 overflow-x-auto">
               {canSeeSection('personales') && (
-                <button onClick={() => setActiveTab('personales')} className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === 'personales' ? 'border-invictus-500 text-invictus-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
+                <button onClick={() => setActiveTab('personales')} className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === 'personales' ? 'border-invictus-500 text-invictus-600' : 'border-transparent text-slate-500 hover:text-gray-700'}`}>
                   Personales
                 </button>
               )}
               {canSeeSection('inscripcion') && usuario.rol === 'Alumno' && (
-                <button onClick={() => setActiveTab('inscripcion')} className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === 'inscripcion' ? 'border-invictus-500 text-invictus-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
+                <button onClick={() => setActiveTab('inscripcion')} className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === 'inscripcion' ? 'border-invictus-500 text-invictus-600' : 'border-transparent text-slate-500 hover:text-gray-700'}`}>
                   Inscripción
                 </button>
               )}
               {canSeeSection('pagos') && usuario.rol === 'Alumno' && (
-                <button onClick={() => setActiveTab('pagos')} className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === 'pagos' ? 'border-invictus-500 text-invictus-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
+                <button onClick={() => setActiveTab('pagos')} className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === 'pagos' ? 'border-invictus-500 text-invictus-600' : 'border-transparent text-slate-500 hover:text-gray-700'}`}>
                   Pagos
                 </button>
               )}
               {canSeeSection('deportivos') && usuario.rol === 'Alumno' && (
-                <button onClick={() => setActiveTab('deportivos')} className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === 'deportivos' ? 'border-invictus-500 text-invictus-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
+                <button onClick={() => setActiveTab('deportivos')} className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === 'deportivos' ? 'border-invictus-500 text-invictus-600' : 'border-transparent text-slate-500 hover:text-gray-700'}`}>
                   Deportivos
                 </button>
               )}
               {canSeeSection('laborales') && ['Entrenador', 'Recepcionista', 'Administrador'].includes(usuario.rol) && (
-                <button onClick={() => setActiveTab('laborales')} className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === 'laborales' ? 'border-invictus-500 text-invictus-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
+                <button onClick={() => setActiveTab('laborales')} className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === 'laborales' ? 'border-invictus-500 text-invictus-600' : 'border-transparent text-slate-500 hover:text-gray-700'}`}>
                   Laborales
                 </button>
               )}
               {canSeeSection('acceso') && usuario.rol === 'SuperAdmin' && (
-                <button onClick={() => setActiveTab('acceso')} className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === 'acceso' ? 'border-invictus-500 text-invictus-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
+                <button onClick={() => setActiveTab('acceso')} className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === 'acceso' ? 'border-invictus-500 text-invictus-600' : 'border-transparent text-slate-500 hover:text-gray-700'}`}>
                   Acceso
                 </button>
               )}
@@ -279,7 +279,7 @@ function UserDetailModal({ userId, onClose }) {
                   <div className="flex items-center justify-between">
                     <h4 className="text-sm font-semibold text-gray-700">Progreso Deportivo</h4>
                     {usuario.objetivo_entrenamiento && (
-                      <span className="text-xs text-gray-500 bg-gray-50 px-2 py-1 rounded">{usuario.objetivo_entrenamiento}</span>
+                      <span className="text-xs text-slate-500 bg-gray-50 px-2 py-1 rounded">{usuario.objetivo_entrenamiento}</span>
                     )}
                   </div>
                   {progresoLoading ? (
@@ -308,7 +308,7 @@ function UserDetailModal({ userId, onClose }) {
                       </div>
 
                       <div className="mt-4">
-                        <h5 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Habilidades</h5>
+                        <h5 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Habilidades</h5>
                         <div className="space-y-0.5">
                           {Object.entries(SKILL_LABELS).map(([key, label]) => (
                             <div key={key}>
@@ -320,7 +320,7 @@ function UserDetailModal({ userId, onClose }) {
 
                       {ultimaEvaluacion.observacion && (
                         <div className="mt-3 p-3 bg-gray-50 rounded-lg border border-gray-100">
-                          <p className="text-xs font-medium text-gray-500 mb-1">Observación del entrenador</p>
+                          <p className="text-xs font-medium text-slate-500 mb-1">Observación del entrenador</p>
                           <p className="text-sm text-gray-700">{ultimaEvaluacion.observacion}</p>
                         </div>
                       )}

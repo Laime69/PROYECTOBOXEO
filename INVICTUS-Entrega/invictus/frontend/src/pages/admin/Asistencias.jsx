@@ -151,8 +151,8 @@ function Asistencias() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h2 className="text-2xl font-bold text-gray-800">Control de Asistencias</h2>
-          <p className="text-gray-500 mt-1">Planilla diaria — haz clic en el estado para rotar</p>
+          <h2 className="text-2xl font-bold text-[#172033]">Control de Asistencias</h2>
+          <p className="text-slate-500 mt-1">Planilla diaria — haz clic en el estado para rotar</p>
         </div>
         <button onClick={openCreate} className="bg-invictus-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-invictus-700">
           + Registrar
@@ -164,12 +164,12 @@ function Asistencias() {
 
       <div className="flex flex-wrap items-center gap-4 mb-4">
         <div className="flex items-center gap-2">
-          <label className="text-sm text-gray-500">Fecha:</label>
+          <label className="text-sm text-slate-500">Fecha:</label>
           <input type="date" value={filtroFecha} onChange={(e) => setFiltroFecha(e.target.value)}
             className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm" />
         </div>
         <div className="flex items-center gap-2">
-          <label className="text-sm text-gray-500">Turno:</label>
+          <label className="text-sm text-slate-500">Turno:</label>
           <select value={turnoActivo} onChange={(e) => setTurnoActivo(e.target.value)}
             className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm">
             <option value="">Todos</option>
@@ -195,18 +195,18 @@ function Asistencias() {
         ))}
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+      <div className="bg-white rounded-xl shadow-card border border-gray-200/70 transition-all duration-200 overflow-hidden">
         {loading ? (
           <div className="flex justify-center py-12">
             <div className="w-8 h-8 border-4 border-invictus-200 border-t-invictus-600 rounded-full animate-spin" />
           </div>
         ) : alumnos.length === 0 ? (
-          <div className="text-center py-12 text-gray-500">No hay alumnos{turnoActivo ? ` en el turno ${NOMBRES_TURNO[turnoActivo]}` : ''}</div>
+          <div className="text-center py-12 text-slate-500">No hay alumnos{turnoActivo ? ` en el turno ${NOMBRES_TURNO[turnoActivo]}` : ''}</div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-gray-200 bg-gray-50">
+                <tr className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider border-b border-gray-200 bg-gray-50">
                   <th className="px-4 py-3 w-8">#</th>
                   <th className="px-4 py-3">Alumno</th>
                   <th className="px-4 py-3 text-center">Estado</th>
@@ -223,19 +223,19 @@ function Asistencias() {
                   return (
                     <tr key={alId} className={`border-b border-gray-50 hover:bg-gray-50/50 ${estado ? `border-l-4 ${ESTADO_BG[estado]}` : 'border-l-4 border-l-gray-200'}`}>
                       <td className="px-4 py-2.5 text-xs text-gray-400 font-medium">{idx + 1}</td>
-                      <td className="px-4 py-2.5 font-medium text-gray-800">{alNombre}</td>
+                      <td className="px-4 py-2.5 font-medium text-[#172033]">{alNombre}</td>
                       <td className="px-4 py-2.5 text-center">
                         <button
                           onClick={() => toggleEstado(alId)}
                           title={`Clic para rotar${estado ? ` (${estado})` : ''}`}
                           className={`inline-flex items-center justify-center w-10 h-7 rounded-md text-xs font-bold transition-colors cursor-pointer ${
-                            estado ? ESTADO_COLORS[estado] : 'bg-gray-200 text-gray-500 hover:bg-gray-300'
+                            estado ? ESTADO_COLORS[estado] : 'bg-gray-200 text-slate-500 hover:bg-gray-300'
                           }`}
                         >
                           {estado ? ESTADO_LABELS[estado] : '—'}
                         </button>
                       </td>
-                      <td className="px-4 py-2.5 text-gray-500 max-w-[200px] truncate text-xs">
+                      <td className="px-4 py-2.5 text-slate-500 max-w-[200px] truncate text-xs">
                         {existente?.observacion || '—'}
                       </td>
                       <td className="px-4 py-2.5 text-right">
@@ -266,12 +266,12 @@ function Asistencias() {
       </div>
 
       {modal && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-md mx-4">
-            <h3 className="text-lg font-bold text-gray-800 mb-4">{editando ? 'Editar Asistencia' : 'Registrar Asistencia'}</h3>
+        <div className="fixed inset-0 bg-[#071A2B]/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
+          <div className="bg-white rounded-2xl shadow-modal p-6 w-full max-w-md mx-4 animate-scale-in">
+            <h3 className="text-lg font-bold text-[#172033] mb-4">{editando ? 'Editar Asistencia' : 'Registrar Asistencia'}</h3>
             <form onSubmit={handleSave} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-600 mb-1">Alumno</label>
+                <label className="block text-sm font-medium text-slate-500 mb-1">Alumno</label>
                 <select value={form.alumno_id} onChange={(e) => setForm({ ...form, alumno_id: e.target.value })}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" required>
                   <option value="">Seleccionar alumno</option>
@@ -281,12 +281,12 @@ function Asistencias() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-600 mb-1">Fecha</label>
+                <label className="block text-sm font-medium text-slate-500 mb-1">Fecha</label>
                 <input type="date" value={form.fecha} onChange={(e) => setForm({ ...form, fecha: e.target.value })}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" required />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-600 mb-1">Estado</label>
+                <label className="block text-sm font-medium text-slate-500 mb-1">Estado</label>
                 <select value={form.estado} onChange={(e) => setForm({ ...form, estado: e.target.value })}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
                   <option value="presente">Presente</option>
@@ -296,12 +296,12 @@ function Asistencias() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-600 mb-1">Observación</label>
+                <label className="block text-sm font-medium text-slate-500 mb-1">Observación</label>
                 <textarea value={form.observacion} onChange={(e) => setForm({ ...form, observacion: e.target.value })}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" rows="2" />
               </div>
               <div className="flex justify-end gap-3 pt-2">
-                <button type="button" onClick={() => setModal(false)} className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800">Cancelar</button>
+                <button type="button" onClick={() => setModal(false)} className="px-4 py-2 text-sm text-slate-500 hover:text-[#172033]">Cancelar</button>
                 <button type="submit" className="bg-invictus-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-invictus-700">
                   {editando ? 'Actualizar' : 'Registrar'}
                 </button>

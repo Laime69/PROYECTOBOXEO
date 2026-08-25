@@ -133,11 +133,11 @@ function RecepcionRegistrar() {
   return (
     <div className="w-full max-w-4xl mx-auto">
       <div className="mb-8">
-        <h2 className="text-2xl font-bold text-gray-800">Registrar Alumno</h2>
-        <p className="text-gray-500 mt-1">Inscribir nuevo alumno en la academia</p>
+        <h2 className="text-2xl font-bold text-[#172033]">Registrar Alumno</h2>
+        <p className="text-slate-500 mt-1">Inscribir nuevo alumno en la academia</p>
       </div>
 
-      <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-5" noValidate>
+      <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-card border border-gray-200/70 transition-all duration-200 p-6 space-y-5" noValidate>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Nombre completo</label>
           <input type="text" name="nombre" value={form.nombre} onChange={handleChange}
@@ -180,7 +180,7 @@ function RecepcionRegistrar() {
             max={new Date().toISOString().split('T')[0]} className={inputClass('fecha_nacimiento')} />
           {formErrors.fecha_nacimiento && <p className="mt-1 text-xs text-red-500">{formErrors.fecha_nacimiento}</p>}
           {form.fecha_nacimiento && !formErrors.fecha_nacimiento && (
-            <p className="mt-1 text-xs text-gray-500">Edad: {calcularEdad(form.fecha_nacimiento)} años</p>
+            <p className="mt-1 text-xs text-slate-500">Edad: {calcularEdad(form.fecha_nacimiento)} años</p>
           )}
         </div>
 
@@ -258,7 +258,7 @@ function RecepcionRegistrar() {
                   onChange={(e) => { setTurnoAsignar(e.target.value); setTurnoError(''); }}
                   className="text-invictus-600 focus:ring-invictus-500" />
                 <div>
-                  <p className="text-sm font-medium text-gray-800">{t.label}</p>
+                  <p className="text-sm font-medium text-[#172033]">{t.label}</p>
                   <p className="text-xs text-gray-400">{t.horario} | Lunes a Viernes</p>
                 </div>
               </label>

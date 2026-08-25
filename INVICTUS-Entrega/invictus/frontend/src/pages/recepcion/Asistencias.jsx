@@ -65,7 +65,7 @@ function RecepcionAsistencias() {
       tardanza: 'bg-orange-100 text-orange-800',
       justificado: 'bg-blue-100 text-blue-800',
     };
-    return `px-2 py-0.5 rounded-full text-xs font-medium ${styles[estado] || 'bg-gray-100 text-gray-800'}`;
+    return `px-2 py-0.5 rounded-full text-xs font-medium ${styles[estado] || 'bg-gray-100 text-[#172033]'}`;
   };
 
   const getEstadoLabel = (estado) => {
@@ -79,14 +79,14 @@ function RecepcionAsistencias() {
   return (
     <div>
       <div className="mb-6">
-        <h2 className="text-2xl font-bold text-gray-800">Asistencias</h2>
-        <p className="text-gray-500 mt-1">Consulta de asistencias de alumnos</p>
+        <h2 className="text-2xl font-bold text-[#172033]">Asistencias</h2>
+        <p className="text-slate-500 mt-1">Consulta de asistencias de alumnos</p>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 mb-4">
+      <div className="bg-white rounded-xl shadow-card border border-gray-200/70 transition-all duration-200 p-4 mb-4">
         <div className="flex flex-wrap items-end gap-4">
           <div>
-            <label className="text-xs font-medium text-gray-500 uppercase block mb-1">Buscar</label>
+            <label className="text-xs font-medium text-slate-500 uppercase block mb-1">Buscar</label>
             <input
               type="text"
               value={busqueda}
@@ -96,7 +96,7 @@ function RecepcionAsistencias() {
             />
           </div>
           <div>
-            <label className="text-xs font-medium text-gray-500 uppercase block mb-1">Fecha</label>
+            <label className="text-xs font-medium text-slate-500 uppercase block mb-1">Fecha</label>
             <input
               type="date"
               value={filtroFecha}
@@ -106,7 +106,7 @@ function RecepcionAsistencias() {
             />
           </div>
           <div>
-            <label className="text-xs font-medium text-gray-500 uppercase block mb-1">Rango (desde)</label>
+            <label className="text-xs font-medium text-slate-500 uppercase block mb-1">Rango (desde)</label>
             <input
               type="date"
               value={fechaDesde}
@@ -115,7 +115,7 @@ function RecepcionAsistencias() {
             />
           </div>
           <div>
-            <label className="text-xs font-medium text-gray-500 uppercase block mb-1">Rango (hasta)</label>
+            <label className="text-xs font-medium text-slate-500 uppercase block mb-1">Rango (hasta)</label>
             <input
               type="date"
               value={fechaHasta}
@@ -124,7 +124,7 @@ function RecepcionAsistencias() {
             />
           </div>
           <div>
-            <label className="text-xs font-medium text-gray-500 uppercase block mb-1">Estado</label>
+            <label className="text-xs font-medium text-slate-500 uppercase block mb-1">Estado</label>
             <select
               value={filtroEstado}
               onChange={(e) => setFiltroEstado(e.target.value)}
@@ -139,7 +139,7 @@ function RecepcionAsistencias() {
             </select>
           </div>
           <div>
-            <label className="text-xs font-medium text-gray-500 uppercase block mb-1">Actividad</label>
+            <label className="text-xs font-medium text-slate-500 uppercase block mb-1">Actividad</label>
             <select
               value={filtroActividad}
               onChange={(e) => setFiltroActividad(e.target.value)}
@@ -161,23 +161,23 @@ function RecepcionAsistencias() {
 
       {error && <div className="mb-4 bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-700">{error}</div>}
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+      <div className="bg-white rounded-xl shadow-card border border-gray-200/70 transition-all duration-200 overflow-hidden">
         {loading ? (
           <div className="flex justify-center py-12">
             <div className="w-8 h-8 border-4 border-invictus-200 border-t-invictus-600 rounded-full animate-spin" />
           </div>
         ) : asistencias.length === 0 ? (
-          <div className="text-center py-12 text-gray-500">No hay asistencias que coincidan con los filtros</div>
+          <div className="text-center py-12 text-slate-500">No hay asistencias que coincidan con los filtros</div>
         ) : (
           <table className="w-full">
             <thead>
-              <tr className="text-left text-sm text-gray-500 border-b border-gray-100">
-                <th className="px-4 py-3 font-medium">Alumno</th>
-                <th className="px-4 py-3 font-medium">Fecha</th>
-                <th className="px-4 py-3 font-medium">Actividad</th>
-                <th className="px-4 py-3 font-medium">Estado</th>
-                <th className="px-4 py-3 font-medium">Entrenador</th>
-                <th className="px-4 py-3 font-medium">Observación</th>
+              <tr className="text-left text-[11px] uppercase tracking-wider text-slate-400 border-b border-gray-200 bg-slate-50">
+                <th className="px-4 py-3 font-semibold">Alumno</th>
+                <th className="px-4 py-3 font-semibold">Fecha</th>
+                <th className="px-4 py-3 font-semibold">Actividad</th>
+                <th className="px-4 py-3 font-semibold">Estado</th>
+                <th className="px-4 py-3 font-semibold">Entrenador</th>
+                <th className="px-4 py-3 font-semibold">Observación</th>
               </tr>
             </thead>
             <tbody>
@@ -186,15 +186,15 @@ function RecepcionAsistencias() {
                 const isSparring = a.tipo_actividad === 'sparring' || diaSem === 'viernes';
                 return (
                   <tr key={a.id_asistencia} className="border-b border-gray-50 hover:bg-gray-50">
-                    <td className="px-4 py-3 text-sm font-medium text-gray-800">{a.alumno_nombre || '—'}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600">
+                    <td className="px-4 py-3 text-sm font-medium text-[#172033]">{a.alumno_nombre || '—'}</td>
+                    <td className="px-4 py-3 text-sm text-slate-500">
                       {new Date(a.fecha).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                     </td>
                     <td className="px-4 py-3">
                       {isSparring ? (
                         <span className="px-2 py-0.5 bg-red-100 text-red-700 rounded-full text-xs font-bold">Sparring</span>
                       ) : (
-                        <span className="text-sm text-gray-500">Entrenamiento</span>
+                        <span className="text-sm text-slate-500">Entrenamiento</span>
                       )}
                     </td>
                     <td className="px-4 py-3">
@@ -202,8 +202,8 @@ function RecepcionAsistencias() {
                         {getEstadoLabel(a.estado)}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-600">{a.entrenador_nombre || '—'}</td>
-                    <td className="px-4 py-3 text-sm text-gray-500 max-w-[200px] truncate">{a.observacion || '—'}</td>
+                    <td className="px-4 py-3 text-sm text-slate-500">{a.entrenador_nombre || '—'}</td>
+                    <td className="px-4 py-3 text-sm text-slate-500 max-w-[200px] truncate">{a.observacion || '—'}</td>
                   </tr>
                 );
               })}

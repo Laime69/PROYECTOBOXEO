@@ -39,14 +39,14 @@ function AlumnoDashboard() {
     };
     if (!estado) return null;
     const label = estado === 'pagado' ? 'Pagado' : estado === 'vencido' ? 'Vencido' : 'Pendiente';
-    return <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${styles[estado] || 'bg-gray-100 text-gray-800'}`}>{label}</span>;
+    return <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${styles[estado] || 'bg-gray-100 text-[#172033]'}`}>{label}</span>;
   };
 
   return (
     <div>
       <div className="mb-8">
-        <h2 className="text-2xl font-bold text-gray-800">Panel de Alumno / Deportista</h2>
-        <p className="text-gray-500 mt-1">
+        <h2 className="text-2xl font-bold text-[#172033]">Panel de Alumno / Deportista</h2>
+        <p className="text-slate-500 mt-1">
           Bienvenido, {user?.nombre}. Aquí puedes ver tu información y progreso.
         </p>
       </div>
@@ -58,20 +58,20 @@ function AlumnoDashboard() {
       ) : (
         <>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+            <div className="bg-white rounded-xl shadow-card border border-gray-200/70 transition-all duration-200 p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-500 font-medium">Estado de Pago</p>
+                  <p className="text-sm text-slate-500 font-medium">Estado de Pago</p>
                   <div className="mt-2">{getPagoBadge(data?.estado_pago)}</div>
                 </div>
                 <div className="w-12 h-12 bg-green-500 rounded-lg flex items-center justify-center text-2xl">💰</div>
               </div>
             </div>
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+            <div className="bg-white rounded-xl shadow-card border border-gray-200/70 transition-all duration-200 p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-500 font-medium">Mi Horario</p>
-                  <p className="text-lg font-bold text-gray-800 mt-1">
+                  <p className="text-sm text-slate-500 font-medium">Mi Horario</p>
+                  <p className="text-lg font-bold text-[#172033] mt-1">
                     {data?.horario_asignado ? `${data.horario_asignado.nombre_turno} – ${data.horario_asignado.clase}` : 'Sin asignar'}
                   </p>
                   {data?.horario_asignado && (
@@ -81,19 +81,19 @@ function AlumnoDashboard() {
                 <div className="w-12 h-12 bg-purple-500 rounded-lg flex items-center justify-center text-2xl">🕐</div>
               </div>
             </div>
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+            <div className="bg-white rounded-xl shadow-card border border-gray-200/70 transition-all duration-200 p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-500 font-medium">Asistencias</p>
-                  <p className="text-2xl font-bold text-gray-800 mt-1">{data?.total_asistencias ?? 0}</p>
+                  <p className="text-sm text-slate-500 font-medium">Asistencias</p>
+                  <p className="text-2xl font-bold text-[#172033] mt-1">{data?.total_asistencias ?? 0}</p>
                 </div>
                 <div className="w-12 h-12 bg-teal-500 rounded-lg flex items-center justify-center text-2xl">📋</div>
               </div>
             </div>
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+            <div className="bg-white rounded-xl shadow-card border border-gray-200/70 transition-all duration-200 p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-500 font-medium">Asistencia %</p>
+                  <p className="text-sm text-slate-500 font-medium">Asistencia %</p>
                   <p className={`text-2xl font-bold mt-1 ${data?.porcentaje_asistencia === null ? 'text-gray-400' : data?.porcentaje_asistencia >= 75 ? 'text-green-600' : data?.porcentaje_asistencia >= 50 ? 'text-amber-600' : 'text-red-600'}`}>
                     {data?.porcentaje_asistencia !== null ? `${data.porcentaje_asistencia}%` : '—'}
                   </p>
@@ -112,19 +112,19 @@ function AlumnoDashboard() {
             />
           </div>
 
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">Accesos Rápidos</h3>
+          <h3 className="text-lg font-semibold text-[#172033] mb-4">Accesos Rápidos</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {quickLinks.map((link) => (
               <button
                 key={link.path}
                 onClick={() => navigate(link.path)}
-                className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 hover:shadow-md transition-all text-left hover:-translate-y-0.5"
+                className="bg-white rounded-xl shadow-card border border-gray-200/70 transition-all duration-200 p-5 hover:shadow-md transition-all text-left hover:-translate-y-0.5"
               >
                 <div className={`w-10 h-10 ${link.color} rounded-lg flex items-center justify-center text-xl mb-3`}>
                   {link.icon}
                 </div>
-                <h4 className="font-semibold text-gray-800 text-sm">{link.label}</h4>
-                <p className="text-xs text-gray-500 mt-0.5">{link.desc}</p>
+                <h4 className="font-semibold text-[#172033] text-sm">{link.label}</h4>
+                <p className="text-xs text-slate-500 mt-0.5">{link.desc}</p>
               </button>
             ))}
           </div>

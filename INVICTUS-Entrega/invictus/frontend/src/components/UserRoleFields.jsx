@@ -7,8 +7,11 @@ const TURNOS = [
 const inputClass = 'w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-invictus-500';
 const inputError = (hasError) => hasError ? 'border-red-500' : 'border-gray-300';
 
-function UserRoleFields({ mode, form, onChange, onTurnoChange, errors = {}, roleOptions, isSuperAdmin, turnoAsignar, turnoError }) {
+function UserRoleFields({ mode, form, onChange, onTurnoChange, errors = {}, roleOptions, isSuperAdmin, turnoAsignar, turnoError, seccion = 'all' }) {
   const isCreate = mode === 'create';
+  const mostrarCuenta = seccion === 'all' || seccion === 'cuenta';
+  const mostrarPersonal = seccion === 'all' || seccion === 'personal';
+  const mostrarRol = seccion === 'all' || seccion === 'rol';
 
   const calcularEdad = (fecha) => {
     if (!fecha) return null;
@@ -24,100 +27,117 @@ function UserRoleFields({ mode, form, onChange, onTurnoChange, errors = {}, role
 
   return (
     <>
-      {/* ── Campos comunes ── */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Nombre completo</label>
-        <input type="text" name="nombre" value={form.nombre} onChange={onChange}
-          placeholder="Ej: Juan Pérez" className={`${inputClass} ${inputError(errors.nombre)}`} />
-        {errors.nombre && <p className="mt-1 text-xs text-red-500">{errors.nombre}</p>}
-      </div>
+      {/* ── Sección Cuenta ── */}
+      {mostrarCuenta && (
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Nombre completo</label>
+            <input type="text" name="nombre" value={form.nombre} onChange={onChange}
+              placeholder="Ej: Juan Pérez" className={`${inputClass} ${inputError(errors.nombre)}`} />
+            {errors.nombre && <p className="mt-1 text-xs text-red-500">{errors.nombre}</p>}
+          </div>
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Correo electrónico</label>
-        <input type="email" name="correo" value={form.correo} onChange={onChange}
-          placeholder="correo@ejemplo.com" className={`${inputClass} ${inputError(errors.correo)}`} />
-        {errors.correo && <p className="mt-1 text-xs text-red-500">{errors.correo}</p>}
-      </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Correo electrónico</label>
+            <input type="email" name="correo" value={form.correo} onChange={onChange}
+              placeholder="correo@ejemplo.com" className={`${inputClass} ${inputError(errors.correo)}`} />
+            {errors.correo && <p className="mt-1 text-xs text-red-500">{errors.correo}</p>}
+          </div>
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Contraseña {isCreate ? '' : <span className="text-gray-400 font-normal">(dejar vacío para no cambiar)</span>}
-        </label>
-        <input type="password" name="password" value={form.password} onChange={onChange}
-          placeholder={isCreate ? 'Mínimo 6 caracteres' : 'Nueva contraseña'}
-          className={`${inputClass} ${inputError(errors.password)}`} />
-        {errors.password && <p className="mt-1 text-xs text-red-500">{errors.password}</p>}
-      </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Contraseña {isCreate ? '' : <span className="text-gray-400 font-normal">(dejar vacío para no cambiar)</span>}
+              </label>
+              <input type="password" name="password" value={form.password} onChange={onChange}
+                placeholder={isCreate ? 'Mínimo 6 caracteres' : 'Nueva contraseña'}
+                className={`${inputClass} ${inputError(errors.password)}`} />
+              {errors.password && <p className="mt-1 text-xs text-red-500">{errors.password}</p>}
+            </div>
 
-      {isCreate && (
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Confirmar contraseña</label>
-          <input type="password" name="confirmPassword" value={form.confirmPassword} onChange={onChange}
-            placeholder="Repite la contraseña" className={`${inputClass} ${inputError(errors.confirmPassword)}`} />
-          {errors.confirmPassword && <p className="mt-1 text-xs text-red-500">{errors.confirmPassword}</p>}
+            {isCreate && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Confirmar contraseña</label>
+                <input type="password" name="confirmPassword" value={form.confirmPassword} onChange={onChange}
+                  placeholder="Repite la contraseña" className={`${inputClass} ${inputError(errors.confirmPassword)}`} />
+                {errors.confirmPassword && <p className="mt-1 text-xs text-red-500">{errors.confirmPassword}</p>}
+              </div>
+            )}
+          </div>
         </div>
       )}
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Cédula de Identidad (CI)</label>
-        <input type="text" name="ci" value={form.ci} onChange={onChange}
-          placeholder="Ej: 12345678" className={`${inputClass} ${inputError(errors.ci)}`} />
-        {errors.ci && <p className="mt-1 text-xs text-red-500">{errors.ci}</p>}
-      </div>
+      {/* ── Sección Datos personales ── */}
+      {mostrarPersonal && (
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Cédula de Identidad (CI)</label>
+              <input type="text" name="ci" value={form.ci} onChange={onChange}
+                placeholder="Ej: 12345678" className={`${inputClass} ${inputError(errors.ci)}`} />
+              {errors.ci && <p className="mt-1 text-xs text-red-500">{errors.ci}</p>}
+            </div>
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Fecha de Nacimiento</label>
-        <input type="date" name="fecha_nacimiento" value={form.fecha_nacimiento} onChange={onChange}
-          max={new Date().toISOString().split('T')[0]}
-          className={`${inputClass} ${inputError(errors.fecha_nacimiento)}`} />
-        {errors.fecha_nacimiento && <p className="mt-1 text-xs text-red-500">{errors.fecha_nacimiento}</p>}
-        {edad !== null && !errors.fecha_nacimiento && (
-          <p className="mt-1 text-xs text-gray-500">Edad: {edad} años</p>
-        )}
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Celular</label>
-        <input type="tel" name="celular" value={form.celular} onChange={onChange}
-          placeholder="Ej: 099123456" className={`${inputClass} ${inputError(errors.celular)}`} />
-        {errors.celular && <p className="mt-1 text-xs text-red-500">{errors.celular}</p>}
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Dirección</label>
-        <input type="text" name="direccion" value={form.direccion} onChange={onChange}
-          placeholder="Ej: Av. Principal 1234" className={`${inputClass} ${inputError(errors.direccion)}`} />
-        {errors.direccion && <p className="mt-1 text-xs text-red-500">{errors.direccion}</p>}
-      </div>
-
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Rol</label>
-          <select name="rol" value={form.rol} onChange={onChange}
-            className={`${inputClass} ${inputError(errors.rol)}`}>
-            {roleOptions.map((opt) => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
-            ))}
-          </select>
-        </div>
-        {(isCreate ? isSuperAdmin : true) && (
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Estado</label>
-            <select name="estado" value={form.estado || 'activo'} onChange={onChange}
-              className={`${inputClass} ${inputError(errors.estado)}`}>
-              <option value="activo">Activo</option>
-              <option value="inactivo">Inactivo</option>
-            </select>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Fecha de Nacimiento</label>
+              <input type="date" name="fecha_nacimiento" value={form.fecha_nacimiento} onChange={onChange}
+                max={new Date().toISOString().split('T')[0]}
+                className={`${inputClass} ${inputError(errors.fecha_nacimiento)}`} />
+              {errors.fecha_nacimiento && <p className="mt-1 text-xs text-red-500">{errors.fecha_nacimiento}</p>}
+              {edad !== null && !errors.fecha_nacimiento && (
+                <p className="mt-1 text-xs text-slate-500">Edad: {edad} años</p>
+              )}
+            </div>
           </div>
-        )}
-      </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Celular</label>
+              <input type="tel" name="celular" value={form.celular} onChange={onChange}
+                placeholder="Ej: 099123456" className={`${inputClass} ${inputError(errors.celular)}`} />
+              {errors.celular && <p className="mt-1 text-xs text-red-500">{errors.celular}</p>}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Dirección</label>
+              <input type="text" name="direccion" value={form.direccion} onChange={onChange}
+                placeholder="Ej: Av. Principal 1234" className={`${inputClass} ${inputError(errors.direccion)}`} />
+              {errors.direccion && <p className="mt-1 text-xs text-red-500">{errors.direccion}</p>}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Rol</label>
+              <select name="rol" value={form.rol} onChange={onChange}
+                className={`${inputClass} ${inputError(errors.rol)}`}>
+                {roleOptions.map((opt) => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
+            </div>
+            {(isCreate ? isSuperAdmin : true) && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Estado</label>
+                <select name="estado" value={form.estado || 'activo'} onChange={onChange}
+                  className={`${inputClass} ${inputError(errors.estado)}`}>
+                  <option value="activo">Activo</option>
+                  <option value="inactivo">Inactivo</option>
+                </select>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── Secciones por rol ── */}
 
       {/* ── Sección: Alumno ── */}
-      {form.rol === 'Alumno' && (
+      {mostrarRol && form.rol === 'Alumno' && (
         <>
           <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-3">
             <div>
-              <h4 className="font-semibold text-gray-800">Datos de inscripción</h4>
+              <h4 className="font-semibold text-[#172033]">Datos de inscripción</h4>
               <p className="text-xs text-gray-400 mt-0.5">Los viernes corresponden a sparring.</p>
             </div>
             <div className="grid grid-cols-2 gap-4">
@@ -147,7 +167,7 @@ function UserRoleFields({ mode, form, onChange, onTurnoChange, errors = {}, role
 
           <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-3">
             <div>
-              <h4 className="font-semibold text-gray-800">Datos deportivos</h4>
+              <h4 className="font-semibold text-[#172033]">Datos deportivos</h4>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -179,7 +199,7 @@ function UserRoleFields({ mode, form, onChange, onTurnoChange, errors = {}, role
 
           <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-3">
             <div>
-              <h4 className="font-semibold text-gray-800">Turno de inscripción</h4>
+              <h4 className="font-semibold text-[#172033]">Turno de inscripción</h4>
               <p className="text-xs text-gray-400 mt-0.5">Los viernes corresponden a sparring.</p>
             </div>
             <div className="space-y-2">
@@ -190,7 +210,7 @@ function UserRoleFields({ mode, form, onChange, onTurnoChange, errors = {}, role
                     onChange={(e) => onTurnoChange(e.target.value)}
                     className="text-invictus-600 focus:ring-invictus-500" />
                   <div>
-                    <p className="text-sm font-medium text-gray-800">{t.label}</p>
+                    <p className="text-sm font-medium text-[#172033]">{t.label}</p>
                     <p className="text-xs text-gray-400">{t.horario} | Lunes a Viernes</p>
                   </div>
                 </label>
@@ -202,9 +222,9 @@ function UserRoleFields({ mode, form, onChange, onTurnoChange, errors = {}, role
       )}
 
       {/* ── Sección: Entrenador ── */}
-      {form.rol === 'Entrenador' && (
+      {mostrarRol && form.rol === 'Entrenador' && (
         <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-3">
-          <h4 className="font-semibold text-gray-800">Datos laborales</h4>
+          <h4 className="font-semibold text-[#172033]">Datos laborales</h4>
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Especialidad</label>
@@ -243,9 +263,9 @@ function UserRoleFields({ mode, form, onChange, onTurnoChange, errors = {}, role
       )}
 
       {/* ── Sección: Recepcionista ── */}
-      {form.rol === 'Recepcionista' && (
+      {mostrarRol && form.rol === 'Recepcionista' && (
         <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-3">
-          <h4 className="font-semibold text-gray-800">Datos laborales</h4>
+          <h4 className="font-semibold text-[#172033]">Datos laborales</h4>
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Turno de trabajo</label>
@@ -290,9 +310,9 @@ function UserRoleFields({ mode, form, onChange, onTurnoChange, errors = {}, role
       )}
 
       {/* ── Sección: Administrador ── */}
-      {form.rol === 'Administrador' && (
+      {mostrarRol && form.rol === 'Administrador' && (
         <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-3">
-          <h4 className="font-semibold text-gray-800">Datos laborales</h4>
+          <h4 className="font-semibold text-[#172033]">Datos laborales</h4>
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Cargo</label>
@@ -331,9 +351,9 @@ function UserRoleFields({ mode, form, onChange, onTurnoChange, errors = {}, role
       )}
 
       {/* ── Sección: SuperAdmin ── */}
-      {form.rol === 'SuperAdmin' && (
+      {mostrarRol && form.rol === 'SuperAdmin' && (
         <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-3">
-          <h4 className="font-semibold text-gray-800">Datos del sistema</h4>
+          <h4 className="font-semibold text-[#172033]">Datos del sistema</h4>
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Cargo</label>

@@ -327,8 +327,8 @@ function Asistencias() {
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-full mx-auto">
         <div className="mb-6">
-          <h2 className="text-2xl font-bold text-gray-800">Asistencia de Entrenamiento</h2>
-          <p className="text-gray-500 mt-1">
+          <h2 className="text-2xl font-bold text-[#172033]">Asistencia de Entrenamiento</h2>
+          <p className="text-slate-500 mt-1">
             {usuario ? `${usuario.nombre || ''} — ` : ''}
             Planilla de control de asistencias
           </p>
@@ -345,10 +345,10 @@ function Asistencias() {
           </div>
         )}
 
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 mb-6">
+        <div className="bg-white rounded-xl shadow-card border border-gray-200/70 transition-all duration-200 p-4 mb-6">
           <div className="flex flex-wrap items-center gap-4">
             <div>
-              <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">Turno</label>
+              <label className="text-xs font-medium text-slate-500 uppercase tracking-wider">Turno</label>
               <select
                 value={filtroTurno}
                 onChange={(e) => setFiltroTurno(e.target.value)}
@@ -362,14 +362,14 @@ function Asistencias() {
             </div>
 
             <div>
-              <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">Vista</label>
+              <label className="text-xs font-medium text-slate-500 uppercase tracking-wider">Vista</label>
               <div className="flex mt-1 bg-gray-100 rounded-lg p-0.5">
                 <button
                   onClick={() => setVista('semana')}
                   className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${
                     vista === 'semana'
                       ? 'bg-white shadow text-invictus-700'
-                      : 'text-gray-500 hover:text-gray-700'
+                      : 'text-slate-500 hover:text-gray-700'
                   }`}
                 >
                   Semana
@@ -379,7 +379,7 @@ function Asistencias() {
                   className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${
                     vista === 'mes'
                       ? 'bg-white shadow text-invictus-700'
-                      : 'text-gray-500 hover:text-gray-700'
+                      : 'text-slate-500 hover:text-gray-700'
                   }`}
                 >
                   Mes
@@ -388,11 +388,11 @@ function Asistencias() {
             </div>
 
             <div>
-              <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">Período</label>
+              <label className="text-xs font-medium text-slate-500 uppercase tracking-wider">Período</label>
               <div className="flex items-center gap-2 mt-1">
                 <button
                   onClick={periodoAnterior}
-                  className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 text-gray-600"
+                  className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 text-slate-500"
                 >
                   ←
                 </button>
@@ -401,7 +401,7 @@ function Asistencias() {
                 </span>
                 <button
                   onClick={periodoSiguiente}
-                  className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 text-gray-600"
+                  className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 text-slate-500"
                 >
                   →
                 </button>
@@ -434,55 +434,55 @@ function Asistencias() {
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+          <div className="bg-white rounded-xl shadow-card border border-gray-200/70 transition-all duration-200 p-4">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center text-lg">👥</div>
               <div>
-                <p className="text-2xl font-bold text-gray-800">{resumenGrupo.totalAlumnos}</p>
-                <p className="text-xs text-gray-500">Alumnos</p>
+                <p className="text-2xl font-bold text-[#172033]">{resumenGrupo.totalAlumnos}</p>
+                <p className="text-xs text-slate-500">Alumnos</p>
               </div>
             </div>
           </div>
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+          <div className="bg-white rounded-xl shadow-card border border-gray-200/70 transition-all duration-200 p-4">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-green-50 flex items-center justify-center text-lg">✅</div>
               <div>
                 <p className="text-2xl font-bold text-green-600">{resumenGrupo.presentes}</p>
-                <p className="text-xs text-gray-500">Presentes</p>
+                <p className="text-xs text-slate-500">Presentes</p>
               </div>
             </div>
           </div>
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+          <div className="bg-white rounded-xl shadow-card border border-gray-200/70 transition-all duration-200 p-4">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-red-50 flex items-center justify-center text-lg">❌</div>
               <div>
                 <p className="text-2xl font-bold text-red-600">{resumenGrupo.faltas}</p>
-                <p className="text-xs text-gray-500">Faltas</p>
+                <p className="text-xs text-slate-500">Faltas</p>
               </div>
             </div>
           </div>
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+          <div className="bg-white rounded-xl shadow-card border border-gray-200/70 transition-all duration-200 p-4">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-yellow-50 flex items-center justify-center text-lg">⏰</div>
               <div>
                 <p className="text-2xl font-bold text-yellow-600">{resumenGrupo.tardanzas}</p>
-                <p className="text-xs text-gray-500">Tardanzas</p>
+                <p className="text-xs text-slate-500">Tardanzas</p>
               </div>
             </div>
           </div>
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+          <div className="bg-white rounded-xl shadow-card border border-gray-200/70 transition-all duration-200 p-4">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-purple-50 flex items-center justify-center text-lg">📈</div>
               <div>
                 <p className="text-2xl font-bold text-purple-600">{resumenGrupo.porcentaje}%</p>
-                <p className="text-xs text-gray-500">% Asistencia</p>
+                <p className="text-xs text-slate-500">% Asistencia</p>
               </div>
             </div>
           </div>
         </div>
 
         <div className="mb-4 flex flex-wrap items-center gap-3 text-xs">
-          <span className="text-gray-500 font-medium">Leyenda:</span>
+          <span className="text-slate-500 font-medium">Leyenda:</span>
           {ESTADOS.filter(e => e.key).map(e => (
             <span key={e.key} className={`inline-flex items-center gap-1 px-2 py-1 rounded-full border ${e.color} font-medium`}>
               {e.icon} {e.label}
@@ -496,16 +496,16 @@ function Asistencias() {
           </span>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="bg-white rounded-xl shadow-card border border-gray-200/70 transition-all duration-200 overflow-hidden">
           {loading ? (
             <div className="flex flex-col items-center justify-center py-16">
               <div className="w-10 h-10 border-4 border-invictus-200 border-t-invictus-600 rounded-full animate-spin mb-4" />
-              <p className="text-sm text-gray-500">Cargando planilla...</p>
+              <p className="text-sm text-slate-500">Cargando planilla...</p>
             </div>
           ) : alumnosFiltrados.length === 0 ? (
             <div className="text-center py-16">
               <div className="text-4xl mb-3">📋</div>
-              <p className="text-gray-500 font-medium">No hay alumnos asignados</p>
+              <p className="text-slate-500 font-medium">No hay alumnos asignados</p>
               <p className="text-sm text-gray-400 mt-1">
                 {filtroTurno ? `No hay alumnos en el turno ${NOMBRES_TURNO[filtroTurno] || filtroTurno}` : 'No tienes alumnos asignados aún'}
               </p>
@@ -515,7 +515,7 @@ function Asistencias() {
               <table className="w-full border-collapse">
                 <thead>
                   <tr className="bg-gray-50 border-b border-gray-200">
-                    <th className="sticky left-0 z-10 bg-gray-50 px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider min-w-[180px] border-r border-gray-200">
+                    <th className="sticky left-0 z-10 bg-gray-50 px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider min-w-[180px] border-r border-gray-200">
                       Alumno
                     </th>
                     {diasMes.map(dia => (
@@ -525,24 +525,24 @@ function Asistencias() {
                           dia.esHoy ? 'bg-invictus-50' : dia.esFuturo ? 'bg-gray-100' : ''
                         }`}
                       >
-                        <div className={`text-xs font-semibold ${dia.esHoy ? 'text-invictus-700' : dia.esFuturo ? 'text-gray-400' : 'text-gray-600'}`}>
+                        <div className={`text-xs font-semibold ${dia.esHoy ? 'text-invictus-700' : dia.esFuturo ? 'text-gray-400' : 'text-slate-500'}`}>
                           {dia.nombreCorto}
                         </div>
-                        <div className={`text-lg font-bold ${dia.esHoy ? 'text-invictus-600' : dia.esFuturo ? 'text-gray-400' : 'text-gray-800'}`}>
+                        <div className={`text-lg font-bold ${dia.esHoy ? 'text-invictus-600' : dia.esFuturo ? 'text-gray-400' : 'text-[#172033]'}`}>
                           {dia.numero}
                         </div>
                       </th>
                     ))}
-                    <th className="px-3 py-3 text-center text-xs font-semibold text-gray-600 uppercase bg-gray-100 border-r border-gray-200 min-w-[50px]">
+                    <th className="px-3 py-3 text-center text-xs font-semibold text-slate-500 uppercase bg-gray-100 border-r border-gray-200 min-w-[50px]">
                       P
                     </th>
-                    <th className="px-3 py-3 text-center text-xs font-semibold text-gray-600 uppercase bg-gray-100 border-r border-gray-200 min-w-[50px]">
+                    <th className="px-3 py-3 text-center text-xs font-semibold text-slate-500 uppercase bg-gray-100 border-r border-gray-200 min-w-[50px]">
                       %
                     </th>
-                    <th className="px-3 py-3 text-center text-xs font-semibold text-gray-600 uppercase bg-gray-100 border-r border-gray-200 min-w-[50px]">
+                    <th className="px-3 py-3 text-center text-xs font-semibold text-slate-500 uppercase bg-gray-100 border-r border-gray-200 min-w-[50px]">
                       F
                     </th>
-                    <th className="px-3 py-3 text-center text-xs font-semibold text-gray-600 uppercase bg-gray-100 min-w-[50px]">
+                    <th className="px-3 py-3 text-center text-xs font-semibold text-slate-500 uppercase bg-gray-100 min-w-[50px]">
                       T
                     </th>
                   </tr>
@@ -564,7 +564,7 @@ function Asistencias() {
                               {(alumno.alumno_nombre || alumno.nombre || '??').charAt(0).toUpperCase()}
                             </div>
                             <div className="min-w-0">
-                              <p className="text-sm font-medium text-gray-800 truncate">
+                              <p className="text-sm font-medium text-[#172033] truncate">
                                 {alumno.alumno_nombre || alumno.nombre || '—'}
                               </p>
                               {alumno.turno_asignado && (
@@ -647,7 +647,7 @@ function Asistencias() {
                         if (grid[aid]?.[dia.fecha]) count++;
                       });
                       return (
-                        <td key={dia.fecha} className="px-2 py-3 text-center text-xs text-gray-600 border-r border-gray-100">
+                        <td key={dia.fecha} className="px-2 py-3 text-center text-xs text-slate-500 border-r border-gray-100">
                           {count > 0 ? count : '—'}
                         </td>
                       );

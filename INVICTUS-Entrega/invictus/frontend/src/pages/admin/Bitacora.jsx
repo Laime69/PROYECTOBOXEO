@@ -85,16 +85,16 @@ function Bitacora() {
   return (
     <div>
       <div className="mb-6">
-        <h2 className="text-2xl font-bold text-gray-800">Bitácora del Sistema</h2>
-        <p className="text-gray-500 mt-1">Registro de acciones importantes del sistema</p>
+        <h2 className="text-2xl font-bold text-[#172033]">Bitácora del Sistema</h2>
+        <p className="text-slate-500 mt-1">Registro de acciones importantes del sistema</p>
       </div>
 
       {error && <div className="mb-4 bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-700">{error}</div>}
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 mb-6">
+      <div className="bg-white rounded-xl shadow-card border border-gray-200/70 transition-all duration-200 p-4 mb-6">
         <div className="flex flex-wrap items-end gap-4">
           <div>
-            <label className="text-xs font-medium text-gray-500 uppercase">Buscar</label>
+            <label className="text-xs font-medium text-slate-500 uppercase">Buscar</label>
             <input
               type="text"
               value={busqueda}
@@ -104,7 +104,7 @@ function Bitacora() {
             />
           </div>
           <div>
-            <label className="text-xs font-medium text-gray-500 uppercase">Rol</label>
+            <label className="text-xs font-medium text-slate-500 uppercase">Rol</label>
             <select
               value={filtroRol}
               onChange={(e) => setFiltroRol(e.target.value)}
@@ -117,7 +117,7 @@ function Bitacora() {
             </select>
           </div>
           <div>
-            <label className="text-xs font-medium text-gray-500 uppercase">Módulo</label>
+            <label className="text-xs font-medium text-slate-500 uppercase">Módulo</label>
             <select
               value={filtroModulo}
               onChange={(e) => setFiltroModulo(e.target.value)}
@@ -130,7 +130,7 @@ function Bitacora() {
             </select>
           </div>
           <div>
-            <label className="text-xs font-medium text-gray-500 uppercase">Acción</label>
+            <label className="text-xs font-medium text-slate-500 uppercase">Acción</label>
             <select
               value={filtroAccion}
               onChange={(e) => setFiltroAccion(e.target.value)}
@@ -143,7 +143,7 @@ function Bitacora() {
             </select>
           </div>
           <div>
-            <label className="text-xs font-medium text-gray-500 uppercase">Desde</label>
+            <label className="text-xs font-medium text-slate-500 uppercase">Desde</label>
             <input
               type="date"
               value={fechaDesde}
@@ -152,7 +152,7 @@ function Bitacora() {
             />
           </div>
           <div>
-            <label className="text-xs font-medium text-gray-500 uppercase">Hasta</label>
+            <label className="text-xs font-medium text-slate-500 uppercase">Hasta</label>
             <input
               type="date"
               value={fechaHasta}
@@ -176,39 +176,39 @@ function Bitacora() {
         </div>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+      <div className="bg-white rounded-xl shadow-card border border-gray-200/70 transition-all duration-200 overflow-hidden">
         {loading ? (
           <div className="flex justify-center py-12">
             <div className="w-8 h-8 border-4 border-invictus-200 border-t-invictus-600 rounded-full animate-spin" />
           </div>
         ) : registros.length === 0 ? (
-          <div className="text-center py-12 text-gray-500">No hay registros de actividad</div>
+          <div className="text-center py-12 text-slate-500">No hay registros de actividad</div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="text-left text-sm text-gray-500 border-b border-gray-100">
-                  <th className="px-4 py-3 font-medium">Fecha/Hora</th>
-                  <th className="px-4 py-3 font-medium">Usuario</th>
-                  <th className="px-4 py-3 font-medium">Rol</th>
-                  <th className="px-4 py-3 font-medium">Acción</th>
-                  <th className="px-4 py-3 font-medium">Módulo</th>
-                  <th className="px-4 py-3 font-medium">Descripción</th>
+                <tr className="text-left text-[11px] uppercase tracking-wider text-slate-400 border-b border-gray-200 bg-slate-50">
+                  <th className="px-4 py-3 font-semibold">Fecha/Hora</th>
+                  <th className="px-4 py-3 font-semibold">Usuario</th>
+                  <th className="px-4 py-3 font-semibold">Rol</th>
+                  <th className="px-4 py-3 font-semibold">Acción</th>
+                  <th className="px-4 py-3 font-semibold">Módulo</th>
+                  <th className="px-4 py-3 font-semibold">Descripción</th>
                 </tr>
               </thead>
               <tbody>
                 {registros.map((r) => (
                   <tr key={r.id} className="border-b border-gray-50 hover:bg-gray-50">
-                    <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{formatFecha(r.fecha_hora)}</td>
-                    <td className="px-4 py-3 text-sm font-medium text-gray-800">{r.usuario_nombre || '—'}</td>
-                    <td className="px-4 py-3 text-sm text-gray-500">{r.rol || '—'}</td>
+                    <td className="px-4 py-3 text-sm text-slate-500 whitespace-nowrap">{formatFecha(r.fecha_hora)}</td>
+                    <td className="px-4 py-3 text-sm font-medium text-[#172033]">{r.usuario_nombre || '—'}</td>
+                    <td className="px-4 py-3 text-sm text-slate-500">{r.rol || '—'}</td>
                     <td className="px-4 py-3">
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${ACCION_COLORS[r.accion] || 'bg-gray-100 text-gray-800'}`}>
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${ACCION_COLORS[r.accion] || 'bg-gray-100 text-[#172033]'}`}>
                         {ACCION_LABELS[r.accion] || r.accion}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-500">{MODULO_LABELS[r.modulo] || r.modulo}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600 max-w-[300px] truncate">{r.descripcion || '—'}</td>
+                    <td className="px-4 py-3 text-sm text-slate-500">{MODULO_LABELS[r.modulo] || r.modulo}</td>
+                    <td className="px-4 py-3 text-sm text-slate-500 max-w-[300px] truncate">{r.descripcion || '—'}</td>
                   </tr>
                 ))}
               </tbody>
