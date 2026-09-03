@@ -66,7 +66,7 @@ function Asistencias() {
     } catch {}
   }, [turnoActivo]);
 
-  useEffect(() => { fetchAlumnos(); fetchAsistencias(); }, []);
+  useEffect(() => { fetchAlumnos(); }, [fetchAlumnos]);
   useEffect(() => { fetchAsistencias(); }, [fetchAsistencias]);
 
   useEffect(() => {
