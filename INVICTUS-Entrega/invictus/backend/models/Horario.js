@@ -2,16 +2,20 @@ const pool = require('../config/database');
 
 const quitarAcentos = (s) => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 
-// Columnas derivadas (antes almacenadas de forma redundante).
 const HORARIO_LABELS = `
-  CASE h.turno WHEN 'manana' THEN 'Mañana' WHEN 'tarde' THEN 'Tarde' WHEN 'noche' THEN 'Noche' END AS nombre_turno,
+  CASE h.nombre_turno WHEN 'manana' THEN 'Mañana' WHEN 'tarde' THEN 'Tarde' WHEN 'noche' THEN 'Noche' END AS turno,
+  CASE h.nombre_turno WHEN 'manana' THEN 'Mañana' WHEN 'tarde' THEN 'Tarde' WHEN 'noche' THEN 'Noche' END AS nombre_turno,
   CASE LOWER(h.dia_semana) WHEN 'miercoles' THEN 'Miércoles' ELSE INITCAP(h.dia_semana) END AS dia,
   'Lunes a Viernes' AS dias`;
+
+const ENTRENADOR_JOIN = `
+  LEFT JOIN entrenadores etr ON etr.id_entrenador = h.entrenador_id
+  LEFT JOIN usuarios u ON u.id_usuario = etr.usuario_id`;
 
 class Horario {
   static async crear({ entrenador_id, dia_semana, turno, hora_inicio, hora_fin, clase, grupo, estado, cupo_maximo, tipo_actividad, dia, nombre_turno }) {
     const result = await pool.query(
-      `INSERT INTO horarios (entrenador_id, dia_semana, turno, hora_inicio, hora_fin, clase, grupo, estado, cupo_maximo, tipo_actividad)
+      `INSERT INTO horarios (entrenador_id, dia_semana, nombre_turno, hora_inicio, hora_fin, clase, grupo, estado, cupo_maximo, tipo_actividad)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
        RETURNING *`,
       [
@@ -32,8 +36,7 @@ class Horario {
 
   static async findAll(filtros = {}) {
     let query = `SELECT h.*, ${HORARIO_LABELS}, u.nombre AS entrenador_nombre, u.correo AS entrenador_correo
-                 FROM horarios h
-                 LEFT JOIN usuarios u ON h.entrenador_id = u.id_usuario`;
+                 FROM horarios h ${ENTRENADOR_JOIN}`;
     const condiciones = [];
     const params = [];
     let idx = 1;
@@ -47,16 +50,16 @@ class Horario {
       params.push(filtros.dia_semana);
     }
     if (filtros.turno) {
-      condiciones.push(`h.turno = $${idx++}`);
-      params.push(filtros.turno);
+      condiciones.push(`h.nombre_turno = $${idx++}`);
+      params.push(quitarAcentos(filtros.turno));
     }
     if (filtros.nombre_turno) {
-      condiciones.push(`h.turno = $${idx++}`);
+      condiciones.push(`h.nombre_turno = $${idx++}`);
       params.push(quitarAcentos(filtros.nombre_turno));
     }
     if (filtros.entrenador_id) {
       condiciones.push(`h.entrenador_id = $${idx++}`);
-      params.push(filtros.entrenador_id);
+      params.push(parseInt(filtros.entrenador_id, 10));
     }
     if (filtros.estado) {
       condiciones.push(`h.estado = $${idx++}`);
@@ -70,7 +73,7 @@ class Horario {
     if (condiciones.length > 0) {
       query += ' WHERE ' + condiciones.join(' AND ');
     }
-    query += ' ORDER BY h.turno, h.dia_semana, h.hora_inicio';
+    query += ' ORDER BY h.nombre_turno, h.dia_semana, h.hora_inicio';
 
     const result = await pool.query(query, params);
     return result.rows;
@@ -79,8 +82,7 @@ class Horario {
   static async findById(id) {
     const result = await pool.query(
       `SELECT h.*, ${HORARIO_LABELS}, u.nombre AS entrenador_nombre, u.correo AS entrenador_correo
-       FROM horarios h
-       LEFT JOIN usuarios u ON h.entrenador_id = u.id_usuario
+       FROM horarios h ${ENTRENADOR_JOIN}
        WHERE h.id_horario = $1`,
       [id]
     );
@@ -94,7 +96,7 @@ class Horario {
 
     if (data.entrenador_id !== undefined) {
       fields.push(`entrenador_id = $${idx++}`);
-      params.push(data.entrenador_id);
+      params.push(data.entrenador_id || null);
     }
     if (data.dia_semana !== undefined) {
       fields.push(`dia_semana = $${idx++}`);
@@ -103,12 +105,12 @@ class Horario {
       fields.push(`dia_semana = $${idx++}`);
       params.push(quitarAcentos(data.dia));
     }
-    if (data.turno !== undefined) {
-      fields.push(`turno = $${idx++}`);
-      params.push(data.turno);
-    } else if (data.nombre_turno !== undefined) {
-      fields.push(`turno = $${idx++}`);
+    if (data.nombre_turno !== undefined) {
+      fields.push(`nombre_turno = $${idx++}`);
       params.push(quitarAcentos(data.nombre_turno));
+    } else if (data.turno !== undefined) {
+      fields.push(`nombre_turno = $${idx++}`);
+      params.push(quitarAcentos(data.turno));
     }
     if (data.hora_inicio !== undefined) {
       fields.push(`hora_inicio = $${idx++}`);
@@ -161,13 +163,12 @@ class Horario {
 
   static async findByDia(dia) {
     const result = await pool.query(
-      `SELECT h.turno, h.hora_inicio, h.hora_fin, h.tipo_actividad, ${HORARIO_LABELS},
+      `SELECT h.nombre_turno, h.hora_inicio, h.hora_fin, h.tipo_actividad, ${HORARIO_LABELS},
               h.clase, h.estado,
               u.nombre AS entrenador_nombre
-       FROM horarios h
-       LEFT JOIN usuarios u ON h.entrenador_id = u.id_usuario
+       FROM horarios h ${ENTRENADOR_JOIN}
        WHERE LOWER(h.dia_semana) = LOWER($1)
-       ORDER BY CASE h.turno WHEN 'manana' THEN 1 WHEN 'tarde' THEN 2 WHEN 'noche' THEN 3 END`,
+       ORDER BY CASE h.nombre_turno WHEN 'manana' THEN 1 WHEN 'tarde' THEN 2 WHEN 'noche' THEN 3 END`,
       [quitarAcentos(dia)]
     );
     return result.rows;
@@ -198,15 +199,14 @@ class Horario {
     const result = await pool.query(
       `SELECT h.*, ${HORARIO_LABELS}, u.nombre AS entrenador_nombre, u.correo AS entrenador_correo,
         COALESCE(ah_count.total, 0) AS total_alumnos
-       FROM horarios h
-       LEFT JOIN usuarios u ON h.entrenador_id = u.id_usuario
+       FROM horarios h ${ENTRENADOR_JOIN}
        LEFT JOIN (
-         SELECT turno, COUNT(*)::int AS total
-         FROM alumno_horarios WHERE estado = 'activo' AND turno IS NOT NULL
-         GROUP BY turno
-       ) ah_count ON ah_count.turno = h.turno
+         SELECT horario_id, COUNT(*)::int AS total
+         FROM alumno_horarios WHERE estado = 'activo'
+         GROUP BY horario_id
+       ) ah_count ON ah_count.horario_id = h.id_horario
        ORDER BY
-         CASE h.turno
+         CASE h.nombre_turno
            WHEN 'manana' THEN 1
            WHEN 'tarde' THEN 2
            WHEN 'noche' THEN 3
@@ -225,9 +225,8 @@ class Horario {
   static async findByTurno(turno) {
     const result = await pool.query(
       `SELECT h.*, ${HORARIO_LABELS}, u.nombre AS entrenador_nombre, u.correo AS entrenador_correo
-       FROM horarios h
-       LEFT JOIN usuarios u ON h.entrenador_id = u.id_usuario
-       WHERE h.turno = $1 AND h.estado = 'activo'
+       FROM horarios h ${ENTRENADOR_JOIN}
+       WHERE h.nombre_turno = $1 AND h.estado = 'activo'
        ORDER BY
          CASE h.dia_semana
            WHEN 'lunes' THEN 1
@@ -236,7 +235,7 @@ class Horario {
            WHEN 'jueves' THEN 4
            WHEN 'viernes' THEN 5
          END`,
-      [turno]
+      [quitarAcentos(turno)]
     );
     return result.rows;
   }
@@ -244,10 +243,9 @@ class Horario {
   static async findByEntrenador(entrenadorId) {
     const result = await pool.query(
       `SELECT h.*, ${HORARIO_LABELS}, u.nombre AS entrenador_nombre, u.correo AS entrenador_correo
-       FROM horarios h
-       LEFT JOIN usuarios u ON h.entrenador_id = u.id_usuario
+       FROM horarios h ${ENTRENADOR_JOIN}
        WHERE h.entrenador_id = $1
-       ORDER BY h.turno, h.dia_semana, h.hora_inicio`,
+       ORDER BY h.nombre_turno, h.dia_semana, h.hora_inicio`,
       [entrenadorId]
     );
     return result.rows;

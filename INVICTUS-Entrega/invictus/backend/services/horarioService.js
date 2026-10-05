@@ -4,7 +4,7 @@ const AlumnoHorario = require('../models/AlumnoHorario');
 class HorarioService {
   async list(filtros = {}, currentUser = null) {
     if (currentUser && currentUser.rol === 'Entrenador') {
-      filtros.entrenador_id = currentUser.id_usuario;
+      filtros.entrenador_id = currentUser.id_entrenador;
     }
     return await Horario.findAll(filtros);
   }
@@ -52,7 +52,7 @@ class HorarioService {
   async getGrilla(currentUser = null) {
     const horarios = await Horario.findGrilla();
     if (currentUser && currentUser.rol === 'Entrenador') {
-      return horarios.filter(h => h.entrenador_id === currentUser.id_usuario);
+      return horarios.filter(h => h.entrenador_id === currentUser.id_entrenador);
     }
     return horarios;
   }

@@ -1,30 +1,38 @@
 const Usuario = require('../models/Usuario');
+const Alumno = require('../models/Alumno');
 const Horario = require('../models/Horario');
 const Asistencia = require('../models/Asistencia');
 const AlumnoHorario = require('../models/AlumnoHorario');
 
 class AlumnoService {
+  async _resolverAlumno(usuarioId) {
+    const alumno = await Alumno.findByUsuarioId(usuarioId);
+    if (!alumno) throw new Error('Alumno no encontrado');
+    return alumno;
+  }
+
   async getPerfil(usuarioId) {
-    const usuario = await Usuario.findById(usuarioId);
-    if (!usuario) throw new Error('Usuario no encontrado');
+    const alumno = await this._resolverAlumno(usuarioId);
     return {
-      id_usuario: usuario.id_usuario,
-      nombre: usuario.nombre,
-      correo: usuario.correo,
-      fecha_inscripcion: usuario.fecha_inscripcion,
-      fecha_vencimiento: usuario.fecha_vencimiento,
-      estado_pago: usuario.estado_pago,
-      fecha_creacion: usuario.fecha_creacion,
+      id_usuario: alumno.id_usuario,
+      alumno_id: alumno.id_alumno,
+      nombre: alumno.nombre,
+      correo: alumno.correo,
+      fecha_inscripcion: alumno.fecha_inscripcion,
+      fecha_vencimiento: alumno.fecha_vencimiento,
+      estado_pago: alumno.estado_pago,
+      fecha_creacion: alumno.fecha_creacion,
     };
   }
 
   async getHorarios(usuarioId) {
-    const asignacion = await AlumnoHorario.findActivoByAlumno(usuarioId);
+    const alumno = await this._resolverAlumno(usuarioId);
+    const asignacion = await AlumnoHorario.findActivoByAlumno(alumno.id_alumno);
     if (!asignacion) {
       return { asignado: null };
     }
 
-    const turno = asignacion.turno || asignacion.turno_horario;
+    const turno = asignacion.turno || asignacion.nombre_turno || asignacion.turno_horario;
     if (turno) {
       const horarios = await Horario.findByTurno(turno);
       return {
@@ -40,28 +48,29 @@ class AlumnoService {
   }
 
   async getAsistencias(usuarioId, filtros = {}) {
-    filtros.alumno_id = usuarioId;
+    const alumno = await this._resolverAlumno(usuarioId);
+    filtros.alumno_id = alumno.id_alumno;
     return await Asistencia.findAll(filtros);
   }
 
   async getEstadoPago(usuarioId) {
-    const usuario = await Usuario.findById(usuarioId);
-    if (!usuario) throw new Error('Usuario no encontrado');
+    const alumno = await this._resolverAlumno(usuarioId);
     return {
-      estado_pago: usuario.estado_pago,
-      fecha_inscripcion: usuario.fecha_inscripcion,
-      fecha_vencimiento: usuario.fecha_vencimiento,
+      estado_pago: alumno.estado_pago,
+      fecha_inscripcion: alumno.fecha_inscripcion,
+      fecha_vencimiento: alumno.fecha_vencimiento,
     };
   }
 
   async getDashboard(usuarioId) {
-    const usuario = await Usuario.findById(usuarioId);
+    const alumno = await this._resolverAlumno(usuarioId);
+    const usuario = await Usuario.findById(alumno.id_usuario);
     if (!usuario) throw new Error('Usuario no encontrado');
-    const asignacion = await AlumnoHorario.findActivoByAlumno(usuarioId);
+    const asignacion = await AlumnoHorario.findActivoByAlumno(alumno.id_alumno);
 
     let horarioAsignado = null;
     if (asignacion) {
-      const turno = asignacion.turno || asignacion.turno_horario;
+      const turno = asignacion.turno || asignacion.nombre_turno || asignacion.turno_horario;
       if (turno) {
         const horarios = await Horario.findByTurno(turno);
         const nombresTurno = { manana: 'Mañana', tarde: 'Tarde', noche: 'Noche' };
@@ -95,7 +104,7 @@ class AlumnoService {
     }
 
     const asistenciasRecientes = await Asistencia.findAll({
-      alumno_id: usuarioId,
+      alumno_id: alumno.id_alumno,
     });
     const totalAsistencias = asistenciasRecientes.length;
     const presentes = asistenciasRecientes.filter(a => a.estado === 'presente').length;
@@ -128,11 +137,12 @@ class AlumnoService {
     const horarios_semana = await Horario.countAllHorarios();
 
     return {
-      nombre: usuario.nombre,
-      correo: usuario.correo,
-      estado_pago: usuario.estado_pago,
-      fecha_inscripcion: usuario.fecha_inscripcion,
-      fecha_vencimiento: usuario.fecha_vencimiento,
+      nombre: alumno.nombre,
+      correo: alumno.correo,
+      alumno_id: alumno.id_alumno,
+      estado_pago: alumno.estado_pago,
+      fecha_inscripcion: alumno.fecha_inscripcion,
+      fecha_vencimiento: alumno.fecha_vencimiento,
       horario_asignado: horarioAsignado,
       total_asistencias: totalAsistencias,
       asistencias_presentes: presentes,

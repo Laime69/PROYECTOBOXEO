@@ -1,333 +1,289 @@
-import { useState, useEffect } from 'react';
-import { getMisAlumnosEntrenador } from '../../services/entrenadorService';
-import { getHistorialProgreso, createProgreso } from '../../services/progresoService';
-
-const CAMPOS = [
-  { key: 'tecnica', label: 'Técnica' },
-  { key: 'defensa', label: 'Defensa' },
-  { key: 'resistencia', label: 'Resistencia' },
-  { key: 'velocidad', label: 'Velocidad' },
-  { key: 'fuerza', label: 'Fuerza' },
-  { key: 'disciplina', label: 'Disciplina' },
-  { key: 'sparring', label: 'Sparring' },
-];
-
-const NOMBRES_NIVEL = { inicial: 'Inicial', basico: 'Básico', intermedio: 'Intermedio', avanzado: 'Avanzado', competitivo: 'Competitivo' };
-const COLORES_NIVEL = { inicial: 'bg-red-100 text-red-800', basico: 'bg-amber-100 text-amber-800', intermedio: 'bg-blue-100 text-blue-800', avanzado: 'bg-green-100 text-green-800', competitivo: 'bg-purple-100 text-purple-800' };
-
-function calcularPromedio(puntajes) {
-  const valores = Object.values(puntajes).filter(v => v != null && v >= 1 && v <= 10);
-  if (valores.length === 0) return null;
-  const suma = valores.reduce((a, b) => a + b, 0);
-  return Math.round((suma / valores.length) * 100) / 100;
-}
-
-function calcularNivel(promedio) {
-  if (promedio == null) return '';
-  if (promedio < 4) return 'inicial';
-  if (promedio < 6) return 'basico';
-  if (promedio < 8) return 'intermedio';
-  if (promedio < 9.5) return 'avanzado';
-  return 'competitivo';
-}
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useTituloPagina } from '../../hooks/useTituloPagina';
+import {
+  getListaAlumnos,
+  getProgreso,
+  createProgreso,
+  updateProgreso,
+} from '../../services/progresoService';
+import CabeceraPagina from '../../components/CabeceraPagina';
+import Paginacion from '../../components/Paginacion';
+import EvaluacionForm from '../../components/progreso/EvaluacionForm';
+import PerfilProgreso from '../../components/progreso/PerfilProgreso';
+import HistorialEvaluaciones from '../../components/progreso/HistorialEvaluaciones';
+import {
+  NOMBRES_NIVEL_DEPORTIVO,
+  COLORES_NIVEL_DEPORTIVO,
+  ESTADOS_PROGRESO,
+  NOMBRES_TURNO,
+  calcularEstadoProgreso,
+  formatearFecha,
+} from '../../utils/progresoUtils';
 
 function EntrenadorProgreso() {
+  useTituloPagina('Evaluación Deportiva');
   const [alumnos, setAlumnos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const [exitoMsg, setExitoMsg] = useState('');
 
-  const [showFormModal, setShowFormModal] = useState(false);
-  const [selectedAlumno, setSelectedAlumno] = useState(null);
-  const [form, setForm] = useState({
-    fecha_evaluacion: new Date().toISOString().slice(0, 10),
-    nivel: '',
-    tecnica: '', defensa: '', resistencia: '', velocidad: '', fuerza: '', disciplina: '', sparring: '',
-    peso: '', observacion: '',
-  });
+  const [busqueda, setBusqueda] = useState('');
+  const [filtroTurno, setFiltroTurno] = useState('');
+  const [pagina, setPagina] = useState(1);
+  const [porPagina, setPorPagina] = useState(10);
 
-  const [showHistorialModal, setShowHistorialModal] = useState(false);
-  const [historialData, setHistorialData] = useState([]);
-  const [historialNombre, setHistorialNombre] = useState('');
-  const [historialLoading, setHistorialLoading] = useState(false);
+  const [formModal, setFormModal] = useState(null);
+  const [perfilModal, setPerfilModal] = useState(null);
+  const [historialModal, setHistorialModal] = useState(null);
 
-  const fetchAlumnos = async () => {
+  const fetchAlumnos = useCallback(async () => {
     setLoading(true);
+    setError('');
     try {
-      const data = await getMisAlumnosEntrenador();
+      const params = {};
+      if (busqueda.trim()) params.busqueda = busqueda.trim();
+      if (filtroTurno) params.turno = filtroTurno;
+      const data = await getListaAlumnos(params);
       setAlumnos(data.alumnos || []);
     } catch {
-      setError('Error al cargar alumnos');
+      setError('Error al cargar tus alumnos');
+      setAlumnos([]);
     } finally {
       setLoading(false);
     }
-  };
+  }, [busqueda, filtroTurno]);
 
-  useEffect(() => { fetchAlumnos(); }, []);
+  useEffect(() => {
+    const timer = setTimeout(() => fetchAlumnos(), busqueda ? 300 : 0);
+    return () => clearTimeout(timer);
+  }, [fetchAlumnos, busqueda]);
 
-  const openForm = (alumno) => {
-    setSelectedAlumno(alumno);
-    setForm({
-      fecha_evaluacion: new Date().toISOString().slice(0, 10),
-      nivel: '',
-      tecnica: '', defensa: '', resistencia: '', velocidad: '', fuerza: '', disciplina: '', sparring: '',
-      peso: '', observacion: '',
-    });
-    setShowFormModal(true);
-  };
+  const alumnosFiltrados = useMemo(() => {
+    const desde = (pagina - 1) * porPagina;
+    return alumnos.slice(desde, desde + porPagina);
+  }, [alumnos, pagina, porPagina]);
 
-  const handleInputChange = (key, value) => {
-    setForm((prev) => ({ ...prev, [key]: value }));
-  };
-
-  const puntajesActuales = {
-    tecnica: form.tecnica ? Number(form.tecnica) : null,
-    defensa: form.defensa ? Number(form.defensa) : null,
-    resistencia: form.resistencia ? Number(form.resistencia) : null,
-    velocidad: form.velocidad ? Number(form.velocidad) : null,
-    fuerza: form.fuerza ? Number(form.fuerza) : null,
-    disciplina: form.disciplina ? Number(form.disciplina) : null,
-    sparring: form.sparring ? Number(form.sparring) : null,
-  };
-  const promedioActual = calcularPromedio(puntajesActuales);
-  const nivelCalculado = form.nivel || calcularNivel(promedioActual);
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!selectedAlumno) return;
-    try {
-      const data = {
-        alumno_id: selectedAlumno.alumno_id || selectedAlumno.id_usuario,
-        fecha_evaluacion: form.fecha_evaluacion,
-        nivel: nivelCalculado || 'basico',
-        tecnica: form.tecnica ? Number(form.tecnica) : null,
-        defensa: form.defensa ? Number(form.defensa) : null,
-        resistencia: form.resistencia ? Number(form.resistencia) : null,
-        velocidad: form.velocidad ? Number(form.velocidad) : null,
-        fuerza: form.fuerza ? Number(form.fuerza) : null,
-        disciplina: form.disciplina ? Number(form.disciplina) : null,
-        sparring: form.sparring ? Number(form.sparring) : null,
-        peso: form.peso ? Number(form.peso) : null,
-        observacion: form.observacion || null,
-      };
-      await createProgreso(data);
-      setSuccess(`Evaluación registrada: ${selectedAlumno.alumno_nombre}`);
-      setShowFormModal(false);
-      fetchAlumnos();
-    } catch {
-      setError('Error al registrar evaluación');
+  const manejarAccion = async (accion, alumno) => {
+    if (accion === 'ver') setPerfilModal(alumno);
+    if (accion === 'registrar') setFormModal({ modo: 'create', alumno });
+    if (accion === 'historial') setHistorialModal(alumno);
+    if (accion === 'editarUltima') {
+      try {
+        const data = await getProgreso(alumno.progreso_id);
+        setFormModal({ modo: 'editar', alumno, evaluacion: data.progreso });
+      } catch {
+        setError('No se pudo cargar la evaluación');
+      }
     }
   };
 
-  const openHistorial = async (alumno) => {
-    setHistorialNombre(alumno.alumno_nombre);
-    setShowHistorialModal(true);
-    setHistorialLoading(true);
+  const onGuardado = async (payload, tipo, id) => {
     try {
-      const data = await getHistorialProgreso(alumno.alumno_id || alumno.id_usuario);
-      setHistorialData(data.historial || []);
-    } catch {
-      setHistorialData([]);
-    } finally {
-      setHistorialLoading(false);
+      if (tipo === 'edit') {
+        await updateProgreso(id, payload);
+        setExitoMsg('Evaluación actualizada correctamente');
+      } else {
+        await createProgreso(payload);
+        setExitoMsg('Evaluación registrada correctamente');
+      }
+    } catch (err) {
+      throw new Error(err.response?.data?.msg || 'Error al guardar');
     }
   };
 
-  const formatDate = (date) => {
-    if (!date) return '—';
-    return new Date(date).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
-  };
-
-  const getNivelBadge = (nivel) => {
-    const color = COLORES_NIVEL[nivel] || 'bg-gray-100 text-[#172033]';
-    const label = NOMBRES_NIVEL[nivel] || nivel;
-    return <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${color}`}>{label}</span>;
-  };
-
-  if (loading) {
-    return (
-      <div className="flex justify-center py-20">
-        <div className="w-8 h-8 border-4 border-invictus-200 border-t-invictus-600 rounded-full animate-spin" />
-      </div>
-    );
-  }
+  const hayFiltros = busqueda || filtroTurno;
 
   return (
     <div>
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold text-[#172033]">Evaluación Deportiva</h2>
-        <p className="text-slate-500 mt-1">Registra el progreso de tus alumnos</p>
-      </div>
+      <CabeceraPagina
+        titulo="Evaluación Deportiva"
+        subtitulo="Registra y consulta el progreso de tus alumnos"
+      />
 
-      {error && <div className="mb-4 bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-700">{error}</div>}
-      {success && <div className="mb-4 bg-green-50 border border-green-200 rounded-lg px-4 py-3 text-sm text-green-700">{success}</div>}
-
-      <div className="bg-white rounded-xl shadow-card border border-gray-200/70 transition-all duration-200 overflow-hidden">
-        {alumnos.length === 0 ? (
-          <div className="text-center py-12 text-slate-500">No tienes alumnos asignados</div>
-        ) : (
-          <table className="w-full">
-            <thead>
-              <tr className="text-left text-[11px] uppercase tracking-wider text-slate-400 border-b border-gray-200 bg-slate-50">
-                <th className="px-4 py-3 font-semibold">Nombre</th>
-                <th className="px-4 py-3 font-semibold">Turno</th>
-                <th className="px-4 py-3 font-semibold text-center">Estado</th>
-                <th className="px-4 py-3 font-semibold text-right">Acción</th>
-              </tr>
-            </thead>
-            <tbody>
-              {alumnos.map((a) => (
-                <tr key={a.id || a.alumno_id || a.id_usuario} className="border-b border-gray-50 hover:bg-gray-50">
-                  <td className="px-4 py-3 text-sm font-medium text-[#172033]">{a.alumno_nombre}</td>
-                  <td className="px-4 py-3 text-sm text-slate-500">{a.nombre_turno || '—'}</td>
-                  <td className="px-4 py-3 text-center">
-                    {a.estado_pago === 'pagado'
-                      ? <span className="px-2 py-0.5 bg-green-100 text-green-800 rounded-full text-xs font-medium">Habilitado</span>
-                      : <span className="px-2 py-0.5 bg-amber-100 text-amber-800 rounded-full text-xs font-medium">Pendiente</span>}
-                  </td>
-                  <td className="px-4 py-3 text-right space-x-2">
-                    <button
-                      onClick={() => openForm(a)}
-                      className="text-sm font-medium text-green-600 hover:text-green-800"
-                    >
-                      Registrar
-                    </button>
-                    <button
-                      onClick={() => openHistorial(a)}
-                      className="text-sm font-medium text-invictus-600 hover:text-invictus-800"
-                    >
-                      Historial
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
-
-      {showFormModal && selectedAlumno && (
-        <div className="fixed inset-0 bg-[#071A2B]/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
-          <div className="bg-white rounded-2xl shadow-modal p-6 w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto animate-scale-in">
-            <h3 className="text-lg font-bold text-[#172033] mb-4">Registrar Evaluación</h3>
-            <div className="bg-gray-50 rounded-lg p-3 mb-4">
-              <p className="text-sm font-medium text-[#172033]">{selectedAlumno.alumno_nombre}</p>
-              <p className="text-xs text-slate-500">{selectedAlumno.nombre_turno || 'Sin turno'}</p>
-            </div>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-500 mb-1">Fecha de evaluación</label>
-                <input type="date" value={form.fecha_evaluacion}
-                  onChange={(e) => handleInputChange('fecha_evaluacion', e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" required />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                {CAMPOS.map(({ key, label }) => (
-                  <div key={key}>
-                    <label className="block text-xs font-medium text-slate-500 mb-1">{label} (1-10)</label>
-                    <input type="number" min="1" max="10" value={form[key]}
-                      onChange={(e) => handleInputChange(key, e.target.value)}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
-                  </div>
-                ))}
-                <div>
-                  <label className="block text-xs font-medium text-slate-500 mb-1">Peso (kg)</label>
-                  <input type="number" step="0.1" min="0" value={form.peso}
-                    onChange={(e) => handleInputChange('peso', e.target.value)}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
-                </div>
-              </div>
-
-              <div className="bg-blue-50 rounded-lg p-3 flex items-center justify-between">
-                <div>
-                  <span className="text-xs text-blue-600 font-medium">Promedio: </span>
-                  <span className="text-lg font-bold text-blue-800">{promedioActual ?? '—'}</span>
-                </div>
-                <div>
-                  <span className="text-xs text-blue-600 font-medium">Nivel: </span>
-                  <span className="text-base font-semibold text-blue-800">{NOMBRES_NIVEL[nivelCalculado] || 'Automático'}</span>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-500 mb-1">Nivel (manual, opcional)</label>
-                <select value={form.nivel} onChange={(e) => handleInputChange('nivel', e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
-                  <option value="">Automático según promedio</option>
-                  {Object.entries(NOMBRES_NIVEL).map(([k, v]) => (
-                    <option key={k} value={k}>{v}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-500 mb-1">Observación</label>
-                <textarea value={form.observacion} onChange={(e) => handleInputChange('observacion', e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" rows="2" />
-              </div>
-
-              <div className="flex justify-end gap-3 pt-2">
-                <button type="button" onClick={() => setShowFormModal(false)}
-                  className="px-4 py-2 text-sm text-slate-500 hover:text-[#172033]">Cancelar</button>
-                <button type="submit"
-                  className="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-700">
-                  Guardar Evaluación
-                </button>
-              </div>
-            </form>
-          </div>
+      {exitoMsg && (
+        <div className="mb-4 bg-green-50 border border-green-200 rounded-lg px-4 py-3 text-sm text-green-700 flex justify-between items-center">
+          <span>{exitoMsg}</span>
+          <button onClick={() => setExitoMsg('')} className="text-green-700 hover:text-green-900">&times;</button>
+        </div>
+      )}
+      {error && (
+        <div className="mb-4 bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-700 flex justify-between items-center">
+          <span>{error}</span>
+          <button onClick={() => setError('')} className="text-red-700 hover:text-red-900">&times;</button>
         </div>
       )}
 
-      {showHistorialModal && (
-        <div className="fixed inset-0 bg-[#071A2B]/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
-          <div className="bg-white rounded-2xl shadow-modal p-6 w-full max-w-2xl mx-4 max-h-[80vh] flex flex-col animate-scale-in">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h3 className="text-lg font-bold text-[#172033]">Historial</h3>
-                <p className="text-sm text-slate-500">{historialNombre}</p>
-              </div>
-              <button onClick={() => setShowHistorialModal(false)} className="text-gray-400 hover:text-slate-500 text-xl">&times;</button>
-            </div>
-            {historialLoading ? (
-              <div className="flex justify-center py-8">
-                <div className="w-8 h-8 border-4 border-invictus-200 border-t-invictus-600 rounded-full animate-spin" />
-              </div>
-            ) : historialData.length === 0 ? (
-              <div className="text-center py-8 text-slate-500">Sin evaluaciones</div>
-            ) : (
-              <div className="overflow-y-auto flex-1">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="text-left text-slate-500 border-b border-gray-100">
-                      <th className="px-3 py-2 font-medium">Fecha</th>
-                      <th className="px-3 py-2 font-medium text-center">Nivel</th>
-                      <th className="px-3 py-2 font-medium text-center">Prom.</th>
-                      <th className="px-3 py-2 font-medium">Obs.</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {historialData.map((h, idx) => (
-                      <tr key={idx} className="border-b border-gray-50 hover:bg-gray-50">
-                        <td className="px-3 py-2 text-gray-700">{formatDate(h.fecha_evaluacion)}</td>
-                        <td className="px-3 py-2 text-center">{getNivelBadge(h.nivel)}</td>
-                        <td className="px-3 py-2 text-center font-semibold text-gray-700">{h.promedio ?? '—'}</td>
-                        <td className="px-3 py-2 text-slate-500 max-w-[200px] truncate" title={h.observacion}>{h.observacion || '—'}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-            <div className="flex justify-end mt-4 pt-3 border-t border-gray-100">
-              <button onClick={() => setShowHistorialModal(false)}
-                className="px-4 py-2 text-sm text-slate-500 hover:text-[#172033] border border-gray-300 rounded-lg">
-                Cerrar
-              </button>
-            </div>
+      {/* ── Filtros ── */}
+      <div className="bg-white rounded-xl shadow-card border border-gray-200/70 p-4 mb-5">
+        <div className="flex flex-wrap items-end gap-x-5 gap-y-3">
+          <div className="flex-1 min-w-[230px]">
+            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Buscar alumno</label>
+            <input
+              type="text"
+              value={busqueda}
+              onChange={(e) => { setBusqueda(e.target.value); setPagina(1); }}
+              placeholder="Buscar por nombre o documento..."
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-invictus-500"
+            />
           </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Turno</label>
+            <select value={filtroTurno} onChange={(e) => { setFiltroTurno(e.target.value); setPagina(1); }}
+              className={`border rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-invictus-500 ${filtroTurno ? 'border-invictus-400 text-invictus-700 font-medium' : 'border-gray-300'}`}>
+              <option value="">Todos los turnos</option>
+              {Object.entries(NOMBRES_TURNO).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+            </select>
+          </div>
+          {hayFiltros && (
+            <button onClick={() => { setBusqueda(''); setFiltroTurno(''); setPagina(1); }}
+              className="px-4 py-2 text-sm font-medium text-slate-500 bg-gray-100 hover:bg-gray-200 rounded-lg whitespace-nowrap">
+              Limpiar filtros
+            </button>
+          )}
         </div>
+      </div>
+
+      {/* ── Tabla ── */}
+      <div className="bg-white rounded-xl shadow-card border border-gray-200/70 overflow-hidden">
+        <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+          <h3 className="font-semibold text-[#172033] text-sm">Mis Alumnos</h3>
+          <span className="text-xs text-gray-400">{alumnos.length} alumno{alumnos.length !== 1 ? 's' : ''}</span>
+        </div>
+
+        {loading ? (
+          <div className="flex justify-center py-16">
+            <div className="w-8 h-8 border-4 border-invictus-200 border-t-invictus-600 rounded-full animate-spin" />
+          </div>
+        ) : alumnos.length === 0 ? (
+          <div className="text-center py-16 text-slate-500">
+            {hayFiltros ? 'No se encontraron alumnos con los filtros aplicados' : 'No tienes alumnos asignados'}
+          </div>
+        ) : (
+          <>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="text-left text-[11px] uppercase tracking-wider text-slate-400 border-b border-gray-200 bg-slate-50">
+                    <th className="px-3 py-3 font-semibold">Alumno</th>
+                    <th className="px-3 py-3 font-semibold">Nivel</th>
+                    <th className="px-3 py-3 font-semibold">Turno</th>
+                    <th className="px-3 py-3 font-semibold text-center">Peso</th>
+                    <th className="px-3 py-3 font-semibold">Progreso</th>
+                    <th className="px-3 py-3 font-semibold">Última eval.</th>
+                    <th className="px-3 py-3 font-semibold">Estado</th>
+                    <th className="px-3 py-3 text-right font-semibold">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {alumnosFiltrados.map((a) => {
+                    const estado = calcularEstadoProgreso(a.porcentaje_progreso, a.porcentaje_anterior);
+                    return (
+                      <tr key={a.alumno_id} className="border-b border-gray-50 hover:bg-gray-50">
+                        <td className="px-3 py-3">
+                          <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-full bg-invictus-100 text-invictus-700 flex items-center justify-center font-bold text-sm shrink-0">
+                              {(a.alumno_nombre || 'A').charAt(0).toUpperCase()}
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium text-[#172033] truncate">{a.alumno_nombre}</p>
+                              <p className="text-xs text-slate-400">CI: {a.alumno_ci || '—'}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-3 py-3">
+                          <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${COLORES_NIVEL_DEPORTIVO[a.nivel_deportivo] || 'bg-gray-100 text-gray-700'}`}>
+                            {NOMBRES_NIVEL_DEPORTIVO[a.nivel_deportivo] || '—'}
+                          </span>
+                        </td>
+                        <td className="px-3 py-3 text-sm text-slate-600">{a.turno_asignado ? NOMBRES_TURNO[a.turno_asignado] || a.turno_asignado : '—'}</td>
+                        <td className="px-3 py-3 text-center text-sm text-slate-600">{a.ultimo_peso ?? a.peso_actual ?? '—'} kg</td>
+                        <td className="px-3 py-3">
+                          <div className="min-w-[90px]">
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-xs font-semibold text-[#172033]">{a.porcentaje_progreso != null ? `${a.porcentaje_progreso}%` : '—'}</span>
+                            </div>
+                            <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                              <div className="h-full bg-invictus-600 rounded-full" style={{ width: `${Math.min(a.porcentaje_progreso ?? 0, 100)}%` }} />
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-3 py-3 text-sm text-slate-600 whitespace-nowrap">{a.ultima_evaluacion ? formatearFecha(a.ultima_evaluacion) : '—'}</td>
+                        <td className="px-3 py-3">
+                          <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${ESTADOS_PROGRESO[estado]?.color || 'bg-gray-100 text-gray-600'}`}>{estado}</span>
+                        </td>
+                        <td className="px-3 py-3 text-right whitespace-nowrap">
+                          <div className="inline-flex items-center gap-1">
+                            <button onClick={() => manejarAccion('ver', a)} title="Ver progreso"
+                              className="p-1.5 rounded-lg text-blue-600 bg-blue-50 hover:bg-blue-100">
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                            </button>
+                            <button onClick={() => manejarAccion('registrar', a)} title="Registrar evaluación"
+                              className="p-1.5 rounded-lg text-invictus-700 bg-invictus-50 hover:bg-invictus-100">
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
+                            </button>
+                            {a.progreso_id && (
+                              <button onClick={() => manejarAccion('editarUltima', a)} title="Editar última evaluación"
+                                className="p-1.5 rounded-lg text-amber-600 bg-amber-50 hover:bg-amber-100">
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                              </button>
+                            )}
+                            <button onClick={() => manejarAccion('historial', a)} title="Ver historial"
+                              className="p-1.5 rounded-lg text-indigo-600 bg-indigo-50 hover:bg-indigo-100">
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            {alumnos.length > porPagina && (
+              <Paginacion total={alumnos.length} pagina={pagina} porPagina={porPagina} setPagina={setPagina} setPorPagina={setPorPagina} />
+            )}
+          </>
+        )}
+      </div>
+
+      {formModal && (
+        <EvaluacionForm
+          open={!!formModal}
+          onClose={() => setFormModal(null)}
+          alumno={formModal.alumno}
+          evaluacion={formModal.modo === 'editar' ? formModal.evaluacion : null}
+          tipo={formModal.modo}
+          onGuardado={async (payload, tipo, id) => {
+            await onGuardado(payload, tipo, id);
+            fetchAlumnos();
+          }}
+        />
+      )}
+
+      {perfilModal && (
+        <PerfilProgreso
+          alumnoId={perfilModal.alumno_id}
+          onClose={() => setPerfilModal(null)}
+          onRegistrarEvaluacion={() => {
+            const al = perfilModal;
+            setPerfilModal(null);
+            setFormModal({ modo: 'create', alumno: al });
+          }}
+        />
+      )}
+
+      {historialModal && (
+        <HistorialEvaluaciones
+          alumnoId={historialModal.alumno_id}
+          alumnoNombre={historialModal.alumno_nombre}
+          onClose={() => setHistorialModal(null)}
+          onEvaluacionEliminada={fetchAlumnos}
+          onEditar={(evaluacion) => {
+            const al = historialModal;
+            setHistorialModal(null);
+            setFormModal({ modo: 'editar', alumno: al, evaluacion });
+          }}
+        />
       )}
     </div>
   );

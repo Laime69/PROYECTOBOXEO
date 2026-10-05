@@ -24,6 +24,10 @@ class AuthService {
       token,
       user: {
         id: usuario.id_usuario,
+        id_usuario: usuario.id_usuario,
+        alumno_id: usuario.alumno_id ?? null,
+        id_entrenador: usuario.id_entrenador ?? null,
+        id_empleado: usuario.id_empleado ?? null,
         nombre: usuario.nombre,
         correo: usuario.correo,
         rol: usuario.rol,

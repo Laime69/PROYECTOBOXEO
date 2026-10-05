@@ -1,130 +1,221 @@
-import { useState, useEffect } from 'react';
-import { getMisProgresos } from '../../services/progresoService';
-
-const NOMBRES_NIVEL = { inicial: 'Inicial', basico: 'Básico', intermedio: 'Intermedio', avanzado: 'Avanzado', competitivo: 'Competitivo' };
-const COLORES_NIVEL = { inicial: 'bg-red-100 text-red-800', basico: 'bg-amber-100 text-amber-800', intermedio: 'bg-blue-100 text-blue-800', avanzado: 'bg-green-100 text-green-800', competitivo: 'bg-purple-100 text-purple-800' };
-
-const CAMPOS = [
-  { key: 'tecnica', label: 'Técnica' },
-  { key: 'defensa', label: 'Defensa' },
-  { key: 'resistencia', label: 'Resistencia' },
-  { key: 'velocidad', label: 'Velocidad' },
-  { key: 'fuerza', label: 'Fuerza' },
-  { key: 'disciplina', label: 'Disciplina' },
-  { key: 'sparring', label: 'Sparring' },
-];
+import { useState, useEffect, useMemo } from 'react';
+import {
+  RadarChart, PolarGrid, PolarAngleAxis, Radar, Legend, ResponsiveContainer,
+} from 'recharts';
+import { useAuth } from '../../context/AuthContext';
+import CabeceraPagina from '../../components/CabeceraPagina';
+import PerfilProgreso from '../../components/progreso/PerfilProgreso';
+import HistorialEvaluaciones from '../../components/progreso/HistorialEvaluaciones';
+import { getPerfilProgreso, getHistorialProgreso } from '../../services/progresoService';
+import {
+  AREAS_EVALUACION,
+  NOMBRES_NIVEL_DEPORTIVO,
+  COLORES_NIVEL_DEPORTIVO,
+  NOMBRES_NIVEL,
+  NOMBRES_TIPO_EVALUACION,
+  ESTADOS_PROGRESO,
+  formatearFecha,
+} from '../../utils/progresoUtils';
 
 function AlumnoProgreso() {
-  const [data, setData] = useState(null);
+  const { user } = useAuth();
+  const alumnoId = user?.id_usuario ?? user?.id;
+  const [perfil, setPerfil] = useState(null);
+  const [historial, setHistorial] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [modal, setModal] = useState(null);
 
   useEffect(() => {
-    const fetch = async () => {
+    if (!alumnoId) return;
+    const cargar = async () => {
+      setLoading(true);
       try {
-        const result = await getMisProgresos();
-        setData(result);
+        const [perf, hist] = await Promise.all([
+          getPerfilProgreso(alumnoId),
+          getHistorialProgreso(alumnoId),
+        ]);
+        setPerfil(perf);
+        setHistorial(hist.historial || []);
       } catch {
-        setError('Error al cargar tu progreso');
+        setError('Error al cargar tu progreso deportivo');
       } finally {
         setLoading(false);
       }
     };
-    fetch();
-  }, []);
+    cargar();
+  }, [alumnoId]);
 
-  const formatDate = (date) => {
-    if (!date) return '—';
-    return new Date(date).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
-  };
+  const alumno = perfil?.alumno;
+  const ultima = perfil?.ultima_evaluacion;
+  const nivel = ultima?.nivel_deportivo || alumno?.nivel_deportivo;
+  const estado = perfil?.estado_progreso || 'Sin evaluación';
+  const promedios = perfil?.promedios_areas;
 
-  const getNivelBadge = (nivel) => {
-    const color = COLORES_NIVEL[nivel] || 'bg-gray-100 text-[#172033]';
-    const label = NOMBRES_NIVEL[nivel] || nivel;
-    return <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${color}`}>{label}</span>;
-  };
+  const datosRadar = useMemo(
+    () => AREAS_EVALUACION.map((area) => ({ area: area.label, valor: promedios?.[area.clave] ?? 0 })),
+    [promedios]
+  );
+
+  const historialTop = useMemo(
+    () => [...historial]
+      .sort((a, b) => new Date(b.fecha_evaluacion) - new Date(a.fecha_evaluacion))
+      .slice(0, 6),
+    [historial]
+  );
 
   if (loading) {
     return (
-      <div className="flex justify-center py-20">
+      <div className="flex justify-center py-24">
         <div className="w-8 h-8 border-4 border-invictus-200 border-t-invictus-600 rounded-full animate-spin" />
       </div>
     );
   }
 
-  const ultima = data?.ultima_evaluacion;
-  const historial = data?.historial || [];
+  const estadoCfg = ESTADOS_PROGRESO[estado] || ESTADOS_PROGRESO['Sin evaluación'];
+  const tieneEvaluaciones = historial.length > 0;
+
+  const stats = tieneEvaluaciones
+    ? [
+        { valor: ultima?.promedio_general ?? '—', etiqueta: 'promedio', color: 'text-[#172033]' },
+        { valor: ultima?.porcentaje_progreso != null ? `${ultima.porcentaje_progreso}%` : '—', etiqueta: '% progreso', color: 'text-green-600' },
+        { valor: perfil?.diferencia == null ? '—' : `${perfil.diferencia > 0 ? '+' : ''}${perfil.diferencia}%`, etiqueta: 'vs anterior', color: perfil?.diferencia == null ? 'text-slate-500' : perfil?.diferencia >= 0 ? 'text-green-600' : 'text-red-600' },
+        { valor: historial.length, etiqueta: 'evaluaciones', color: 'text-invictus-600' },
+        { valor: formatearFecha(ultima?.fecha_evaluacion), etiqueta: 'última evaluación', color: 'text-[#172033]' },
+      ]
+    : [];
 
   return (
     <div>
-      <div className="mb-8">
-        <h2 className="text-2xl font-bold text-[#172033]">Mi Progreso Deportivo</h2>
-        <p className="text-slate-500 mt-1">Evaluaciones de tu rendimiento</p>
-      </div>
+      <CabeceraPagina
+        titulo="Mi Progreso Deportivo"
+        subtitulo="Consulta tus evaluaciones y evolución en la academia"
+        stats={stats}
+        acciones={
+          <>
+            <button
+              onClick={() => setModal('perfil')}
+              className="px-4 py-2 text-sm font-medium text-invictus-700 bg-invictus-50 hover:bg-invictus-100 rounded-lg transition-colors"
+            >
+              Ver perfil de progreso
+            </button>
+            <button
+              onClick={() => setModal('historial')}
+              className="px-4 py-2 text-sm font-medium text-slate-600 bg-white border border-gray-300 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              Ver historial de evaluaciones
+            </button>
+          </>
+        }
+      />
 
-      {error && <div className="mb-4 bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-700">{error}</div>}
+      {error && (
+        <div className="mb-4 bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-700">{error}</div>
+      )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-        <div className="bg-white rounded-xl shadow-card border border-gray-200/70 transition-all duration-200 p-6">
-          <p className="text-sm text-slate-500 font-medium">Nivel Actual</p>
-          <div className="mt-2 text-lg font-bold">
-            {ultima ? getNivelBadge(ultima.nivel) : <span className="text-gray-400">Sin evaluaciones</span>}
+      {/* Cabecera del alumno */}
+      <div className="mb-5 bg-gradient-to-r from-invictus-600 to-invictus-700 rounded-2xl p-6 text-white shadow-card">
+        <div className="flex flex-wrap items-center gap-4">
+          <div className="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center text-2xl font-bold shrink-0">
+            {(alumno?.alumno_nombre || user?.nombre || 'A').charAt(0).toUpperCase()}
+          </div>
+          <div className="flex-1 min-w-[220px]">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h4 className="text-xl font-bold">{alumno?.alumno_nombre || user?.nombre}</h4>
+              {nivel && (
+                <span className="px-2.5 py-1 rounded-full text-xs font-medium bg-white text-invictus-700">
+                  {NOMBRES_NIVEL_DEPORTIVO[nivel] || nivel}
+                </span>
+              )}
+              <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${estadoCfg.color}`}>{estado}</span>
+            </div>
+            <div className="flex flex-wrap gap-x-5 gap-y-1 mt-2 text-sm text-white/85">
+              {alumno?.nombre_turno && <span><strong className="text-white">Turno:</strong> {alumno.nombre_turno}</span>}
+              {alumno?.entrenador_nombre && <span><strong className="text-white">Entrenador:</strong> {alumno.entrenador_nombre}</span>}
+              {alumno?.fecha_inscripcion && <span><strong className="text-white">Ingreso:</strong> {formatearFecha(alumno.fecha_inscripcion)}</span>}
+            </div>
           </div>
         </div>
-        <div className="bg-white rounded-xl shadow-card border border-gray-200/70 transition-all duration-200 p-6">
-          <p className="text-sm text-slate-500 font-medium">Último Promedio</p>
-          <p className="text-2xl font-bold text-[#172033] mt-1">{ultima?.promedio ?? '—'}</p>
-        </div>
-        <div className="bg-white rounded-xl shadow-card border border-gray-200/70 transition-all duration-200 p-6">
-          <p className="text-sm text-slate-500 font-medium">Total Evaluaciones</p>
-          <p className="text-2xl font-bold text-[#172033] mt-1">{data?.total_evaluaciones ?? 0}</p>
-        </div>
       </div>
 
-      {ultima && ultima.observacion && (
-        <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-sm text-blue-800 mb-6">
-          <span className="font-semibold">Observación del entrenador: </span>
-          {ultima.observacion}
+      {!tieneEvaluaciones ? (
+        <div className="bg-white rounded-xl shadow-card border border-gray-200/70 text-center py-16 px-6">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-invictus-50 flex items-center justify-center">
+            <svg className="w-8 h-8 text-invictus-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+          </div>
+          <h3 className="text-lg font-bold text-[#172033]">Aún no tienes evaluaciones registradas</h3>
+          <p className="text-sm text-slate-500 mt-1 max-w-md mx-auto">
+            Tu entrenador registrará tu nivel, técnica y evolución en tu próxima evaluación. Vuelve pronto para ver tu seguimiento deportivo aquí.
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+          {/* Radar por áreas */}
+          <div className="bg-white rounded-xl shadow-card border border-gray-200/70 p-5">
+            <h4 className="font-semibold text-[#172033] mb-2">Promedios por área</h4>
+            <ResponsiveContainer width="100%" height={260}>
+              <RadarChart data={datosRadar} cx="50%" cy="50%" outerRadius="70%">
+                <PolarGrid />
+                <PolarAngleAxis dataKey="area" tick={{ fontSize: 11 }} />
+                <Radar name="Promedio" dataKey="valor" stroke="#00A878" fill="#00A878" fillOpacity={0.3} />
+                <Legend />
+              </RadarChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Últimas evaluaciones */}
+          <div className="bg-white rounded-xl shadow-card border border-gray-200/70 overflow-hidden">
+            <div className="px-5 py-4 border-b border-gray-100">
+              <h4 className="font-semibold text-[#172033]">Últimas evaluaciones</h4>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="text-left text-[10px] uppercase tracking-wider text-slate-400 border-b border-gray-200 bg-slate-50">
+                    <th className="px-5 py-2.5 font-semibold">Fecha</th>
+                    <th className="px-5 py-2.5 font-semibold">Tipo</th>
+                    <th className="px-5 py-2.5 font-semibold text-center">Nivel</th>
+                    <th className="px-5 py-2.5 font-semibold text-center">Promedio</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {historialTop.map((h) => (
+                    <tr key={h.id} className="border-b border-gray-50 hover:bg-gray-50">
+                      <td className="px-5 py-2.5 text-sm text-[#172033] whitespace-nowrap">{formatearFecha(h.fecha_evaluacion)}</td>
+                      <td className="px-5 py-2.5 text-sm text-slate-600">{NOMBRES_TIPO_EVALUACION[h.tipo_evaluacion] || '—'}</td>
+                      <td className="px-5 py-2.5 text-center">
+                        <span className={`px-1.5 py-0.5 rounded-full text-[11px] font-medium ${COLORES_NIVEL_DEPORTIVO[h.nivel] || 'bg-gray-100 text-gray-700'}`}>
+                          {NOMBRES_NIVEL[h.nivel] || '—'}
+                        </span>
+                      </td>
+                      <td className="px-5 py-2.5 text-center">
+                        <span className="font-semibold text-[#172033]">{h.promedio_general ?? '—'}</span>
+                        {h.porcentaje_progreso != null && (
+                          <span className="text-[10px] text-slate-400 ml-0.5">({h.porcentaje_progreso}%)</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
       )}
 
-      <div className="bg-white rounded-xl shadow-card border border-gray-200/70 transition-all duration-200 overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-100">
-          <h3 className="font-semibold text-[#172033]">Historial de Evaluaciones</h3>
-        </div>
-        {historial.length === 0 ? (
-          <div className="text-center py-8 text-slate-500">Aún no tienes evaluaciones registradas</div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="text-left text-[11px] uppercase tracking-wider text-slate-400 border-b border-gray-200 bg-slate-50">
-                  <th className="px-4 py-3 font-semibold">Fecha</th>
-                  <th className="px-4 py-3 font-semibold text-center">Nivel</th>
-                  {CAMPOS.map((c) => (
-                    <th key={c.key} className="px-3 py-3 font-medium text-center text-xs">{c.label}</th>
-                  ))}
-                  <th className="px-3 py-3 font-medium text-center">Prom.</th>
-                  <th className="px-4 py-3 font-semibold">Observación</th>
-                </tr>
-              </thead>
-              <tbody>
-                {historial.map((h, idx) => (
-                  <tr key={idx} className="border-b border-gray-50 hover:bg-gray-50">
-                    <td className="px-4 py-3 text-sm text-gray-700">{formatDate(h.fecha_evaluacion)}</td>
-                    <td className="px-4 py-3 text-center">{getNivelBadge(h.nivel)}</td>
-                    {CAMPOS.map((c) => (
-                      <td key={c.key} className="px-3 py-3 text-sm text-center text-slate-500">{h[c.key] ?? '—'}</td>
-                    ))}
-                    <td className="px-3 py-3 text-sm text-center font-semibold text-gray-700">{h.promedio ?? '—'}</td>
-                    <td className="px-4 py-3 text-sm text-slate-500 max-w-[150px] truncate" title={h.observacion}>{h.observacion || '—'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+      {modal === 'perfil' && (
+        <PerfilProgreso alumnoId={alumnoId} readOnly onClose={() => setModal(null)} />
+      )}
+      {modal === 'historial' && (
+        <HistorialEvaluaciones
+          alumnoId={alumnoId}
+          alumnoNombre={user?.nombre}
+          readOnly
+          onClose={() => setModal(null)}
+        />
+      )}
     </div>
   );
 }

@@ -108,4 +108,15 @@ const getAlumnosByTurno = async (req, res) => {
   }
 };
 
-module.exports = { asignarHorario, asignarTurno, cambiarHorario, cambiarTurno, getHorarioActual, getAlumnosByHorario, getAlumnosByTurno };
+const getHorarios = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const horarios = await alumnoHorarioService.getHorarios(id);
+    return res.status(200).json({ horarios: horarios || [] });
+  } catch (error) {
+    console.error('[AlumnoHorarioController:getHorarios]', error);
+    return res.status(500).json({ msg: 'Error interno del servidor' });
+  }
+};
+
+module.exports = { asignarHorario, asignarTurno, cambiarHorario, cambiarTurno, getHorarioActual, getHorarios, getAlumnosByHorario, getAlumnosByTurno };

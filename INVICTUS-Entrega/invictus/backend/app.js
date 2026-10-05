@@ -12,6 +12,7 @@ const alumnoHorarioRoutes = require('./routes/alumnoHorarioRoutes');
 const entrenadorRoutes = require('./routes/entrenadorRoutes');
 const pagoRoutes = require('./routes/pagoRoutes');
 const progresoRoutes = require('./routes/progresoRoutes');
+const membresiaRoutes = require('./routes/membresiaRoutes');
 const bitacoraRoutes = require('./routes/bitacoraRoutes');
 
 const app = express();
@@ -29,6 +30,7 @@ app.use('/api/reportes', reporteRoutes);
 app.use('/api/alumno', alumnoRoutes);
 app.use('/api/pagos', pagoRoutes);
 app.use('/api/progresos', progresoRoutes);
+app.use('/api/membresias', membresiaRoutes);
 app.use('/api/bitacora', bitacoraRoutes);
 app.use('/api', alumnoHorarioRoutes);
 app.use('/api/entrenador', entrenadorRoutes);

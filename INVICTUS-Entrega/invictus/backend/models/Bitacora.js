@@ -3,8 +3,8 @@ const pool = require('../config/database');
 class Bitacora {
   static async registrar({ usuario_id, rol, accion, modulo, descripcion, ip }) {
     const result = await pool.query(
-      `INSERT INTO bitacora_acciones (usuario_id, rol, accion, modulo, descripcion, ip)
-       VALUES ($1, $2, $3, $4, $5, $6)
+      `INSERT INTO bitacora_acciones (usuario_id, rol_id, accion, modulo, descripcion, ip)
+       VALUES ($1, (SELECT id_rol FROM roles WHERE nombre = $2), $3, $4, $5, $6)
        RETURNING *`,
       [usuario_id || null, rol || null, accion, modulo, descripcion || null, ip || null]
     );
@@ -12,9 +12,10 @@ class Bitacora {
   }
 
   static async findAll(filtros = {}) {
-    let query = `SELECT b.*, u.nombre AS usuario_nombre, u.correo AS usuario_correo
+    let query = `SELECT b.*, r.nombre AS rol, u.nombre AS usuario_nombre, u.correo AS usuario_correo
                  FROM bitacora_acciones b
-                 LEFT JOIN usuarios u ON b.usuario_id = u.id_usuario`;
+                 LEFT JOIN usuarios u ON b.usuario_id = u.id_usuario
+                 LEFT JOIN roles r ON r.id_rol = b.rol_id`;
     const condiciones = [];
     const params = [];
     let idx = 1;
@@ -24,7 +25,7 @@ class Bitacora {
       params.push(filtros.usuario_id);
     }
     if (filtros.rol) {
-      condiciones.push(`b.rol = $${idx++}`);
+      condiciones.push(`r.nombre = $${idx++}`);
       params.push(filtros.rol);
     }
     if (filtros.modulo) {

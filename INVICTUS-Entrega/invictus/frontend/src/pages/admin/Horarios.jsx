@@ -295,7 +295,7 @@ function Horarios() {
                 >
                   <option value="">Sin asignar</option>
                   {entrenadores.map((en) => (
-                    <option key={en.id_usuario} value={en.id_usuario}>{en.nombre}</option>
+                    <option key={en.id_entrenador} value={en.id_entrenador}>{en.nombre}</option>
                   ))}
                 </select>
               </div>

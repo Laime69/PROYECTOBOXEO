@@ -1,23 +1,25 @@
 const AlumnoHorario = require('../models/AlumnoHorario');
 const Horario = require('../models/Horario');
 
+const TURNOS_VALIDOS = ['manana', 'tarde', 'noche'];
+
 class AlumnoHorarioService {
+  // Un alumno puede estar en varios bloques activos a la vez. Cada operación
+  // solo toca el bloque concerned: desactivar todo sería incorrecto.
   async asignar(alumno_id, horario_id, observacion = null) {
     const horario = await Horario.findById(horario_id);
     if (!horario) throw new Error('Horario no encontrado');
     if (horario.estado !== 'activo') throw new Error('El horario no está activo');
 
-    const existente = await AlumnoHorario.findActivoByAlumno(alumno_id);
-    if (existente) {
-      throw new Error('El alumno ya tiene un horario activo. Usa cambiarHorario en su lugar.');
-    }
+    // Libera únicamente el mismo bloque, para no chocar con el índice único
+    // (alumno_id, horario_id) de las asignaciones activas.
+    await AlumnoHorario.desactivarPorHorarioYAlumno(horario_id, alumno_id);
 
     return await AlumnoHorario.crear({ alumno_id, horario_id, observacion });
   }
 
   async asignarPorTurno(alumno_id, turno, observacion = null) {
-    const turnosValidos = ['manana', 'tarde', 'noche'];
-    if (!turnosValidos.includes(turno)) {
+    if (!TURNOS_VALIDOS.includes(turno)) {
       throw new Error('Turno inválido. Debe ser: manana, tarde o noche');
     }
 
@@ -26,16 +28,13 @@ class AlumnoHorarioService {
       throw new Error('No hay horarios disponibles para este turno');
     }
 
-    const existente = await AlumnoHorario.findActivoByAlumno(alumno_id);
-    if (existente) {
-      await AlumnoHorario.desactivar(existente.id);
-    }
+    const destino = horarios[0].id_horario;
+    await AlumnoHorario.desactivarPorHorarioYAlumno(destino, alumno_id);
 
     return await AlumnoHorario.crear({
       alumno_id,
-      horario_id: horarios[0].id_horario,
+      horario_id: destino,
       observacion: observacion || `Asignado a turno ${turno}`,
-      turno,
     });
   }
 
@@ -44,23 +43,22 @@ class AlumnoHorarioService {
     if (!horario) throw new Error('Horario no encontrado');
     if (horario.estado !== 'activo') throw new Error('El horario no está activo');
 
-    const activo = await AlumnoHorario.findActivoByAlumno(alumno_id);
-    if (activo) {
-      if (activo.horario_id === nuevo_horario_id) {
-        throw new Error('El alumno ya tiene este horario asignado');
-      }
-      await AlumnoHorario.desactivar(activo.id);
+    const yaTiene = await AlumnoHorario.findByHorarioAndAlumno(nuevo_horario_id, alumno_id);
+    if (yaTiene && yaTiene.estado === 'activo') {
+      throw new Error('El alumno ya tiene este horario asignado');
     }
 
+    await AlumnoHorario.desactivarPorHorarioYAlumno(nuevo_horario_id, alumno_id);
+
     return await AlumnoHorario.crear({
-      alumno_id, horario_id: nuevo_horario_id,
+      alumno_id,
+      horario_id: nuevo_horario_id,
       observacion: observacion || 'Cambio de horario',
     });
   }
 
   async cambiarTurno(alumno_id, nuevo_turno, observacion = null) {
-    const turnosValidos = ['manana', 'tarde', 'noche'];
-    if (!turnosValidos.includes(nuevo_turno)) {
+    if (!TURNOS_VALIDOS.includes(nuevo_turno)) {
       throw new Error('Turno inválido. Debe ser: manana, tarde o noche');
     }
 
@@ -69,21 +67,22 @@ class AlumnoHorarioService {
       throw new Error('No hay horarios disponibles para este turno');
     }
 
-    await AlumnoHorario.desactivarByAlumno(alumno_id);
+    const destino = horarios[0].id_horario;
+    await AlumnoHorario.desactivarPorHorarioYAlumno(destino, alumno_id);
 
     return await AlumnoHorario.crear({
       alumno_id,
-      horario_id: horarios[0].id_horario,
+      horario_id: destino,
       observacion: observacion || `Cambio a turno ${nuevo_turno}`,
-      turno: nuevo_turno,
     });
   }
 
+  // Contrato original: un solo horario. Se toma el más reciente.
   async getHorarioActual(alumno_id) {
     const asignacion = await AlumnoHorario.findActivoByAlumno(alumno_id);
     if (!asignacion) return null;
 
-    const turno = asignacion.turno || asignacion.turno_horario;
+    const turno = asignacion.nombre_turno || asignacion.turno_horario;
     if (turno) {
       const horarios = await Horario.findByTurno(turno);
       return {
@@ -94,6 +93,11 @@ class AlumnoHorarioService {
     }
 
     return asignacion;
+  }
+
+  // Todos los bloques activos del alumno.
+  async getHorarios(alumno_id) {
+    return await AlumnoHorario.findActivosByAlumno(alumno_id);
   }
 
   async getAlumnosByHorario(horario_id) {

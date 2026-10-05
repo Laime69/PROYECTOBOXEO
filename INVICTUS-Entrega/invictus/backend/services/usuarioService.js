@@ -1,10 +1,11 @@
 const bcrypt = require('bcrypt');
 const Usuario = require('../models/Usuario');
+const Alumno = require('../models/Alumno');
 const AlumnoHorario = require('../models/AlumnoHorario');
 const Horario = require('../models/Horario');
+const Pago = require('../models/Pago');
 const alumnoHorarioService = require('./alumnoHorarioService');
-
-const MONTO_MENSUAL = 200;
+const pagoService = require('./pagoService');
 
 class UsuarioService {
   async register({ nombre, correo, password, rol, turno, ci, fecha_nacimiento, celular, direccion,
@@ -73,8 +74,8 @@ class UsuarioService {
       celular_institucional,
     });
 
-    if (rol === 'Alumno' && turno) {
-      await alumnoHorarioService.asignarPorTurno(usuario.id_usuario, turno);
+    if (rol === 'Alumno' && turno && usuario.alumno_id) {
+      await alumnoHorarioService.asignarPorTurno(usuario.alumno_id, turno);
     }
 
     return usuario;
@@ -128,17 +129,22 @@ class UsuarioService {
         throw new Error('Solo puedes ver el perfil de tus alumnos');
       }
       // Verificar que el alumno esté asignado a este entrenador
+      const alumnoPerfil = await Alumno.findByUsuarioId(id);
+      if (!alumnoPerfil) {
+        throw new Error('Alumno no encontrado');
+      }
+      const idAlumno = alumnoPerfil.id_alumno;
       const AlumnoHorario = require('../models/AlumnoHorario');
-      const asignado = await AlumnoHorario.findActivoByAlumno(id);
-      if (!asignado || asignado.entrenador_id !== currentUser.id_usuario) {
+      const asignado = await AlumnoHorario.findActivoByAlumno(idAlumno);
+      if (!asignado || asignado.entrenador_id !== currentUser.id_entrenador) {
         // Verificar a través de los horarios del entrenador
         const Horario = require('../models/Horario');
-        const horariosEntrenador = await Horario.findByEntrenador(currentUser.id_usuario);
+        const horariosEntrenador = await Horario.findByEntrenador(currentUser.id_entrenador);
         const horarioIds = horariosEntrenador.map(h => h.id_horario);
         const alumnoHorarios = await Promise.all(
           horarioIds.map(async (hid) => {
             try {
-              const ah = await AlumnoHorario.findByHorarioAndAlumno(hid, id);
+              const ah = await AlumnoHorario.findByHorarioAndAlumno(hid, idAlumno);
               return ah;
             } catch {
               return null;
@@ -241,17 +247,39 @@ class UsuarioService {
 
     const updated = await Usuario.update(id, data);
 
+    if (usuario.rol === 'Alumno' && (!data.rol || data.rol === 'Alumno')) {
+      const camposPago = ['estado_pago', 'fecha_inscripcion', 'fecha_vencimiento'];
+      if (camposPago.some(c => data[c] !== undefined)) {
+        const alumnoPerfil = await Alumno.findByUsuarioId(id);
+        if (alumnoPerfil) {
+          await pagoService.sincronizarDesdePerfil(alumnoPerfil.id_alumno, {
+            estado_pago: data.estado_pago,
+            fecha_inscripcion: data.fecha_inscripcion,
+            fecha_vencimiento: data.fecha_vencimiento,
+          });
+        }
+      }
+    }
+
     if ((usuario.rol === 'Alumno' || data.rol === 'Alumno') && data.turno) {
-      const existente = await AlumnoHorario.findActivoByAlumno(id);
+      const alumnoPerfil = await Alumno.findByUsuarioId(id);
+      if (!alumnoPerfil) {
+        throw new Error('Alumno no encontrado');
+      }
+      const idAlumno = alumnoPerfil.id_alumno;
+      const existente = await AlumnoHorario.findActivoByAlumno(idAlumno);
       if (existente) {
         if (existente.turno !== data.turno && existente.turno_horario !== data.turno) {
-          await alumnoHorarioService.cambiarTurno(id, data.turno);
+          await alumnoHorarioService.cambiarTurno(idAlumno, data.turno);
         }
       } else {
-        await alumnoHorarioService.asignarPorTurno(id, data.turno);
+        await alumnoHorarioService.asignarPorTurno(idAlumno, data.turno);
       }
     } else if (data.rol && data.rol !== 'Alumno' && (usuario.rol === 'Alumno' || data.rol === 'Alumno')) {
-      await AlumnoHorario.desactivarByAlumno(id);
+      const alumnoPerfil = await Alumno.findByUsuarioId(id);
+      if (alumnoPerfil) {
+        await AlumnoHorario.desactivarByAlumno(alumnoPerfil.id_alumno);
+      }
     }
 
     return updated;
@@ -284,8 +312,12 @@ class UsuarioService {
 
   async getDashboardStats() {
     const stats = await Usuario.countAll();
-    const alumnos_pagados = await Usuario.countPagados();
-    const ingresos_mes = alumnos_pagados * MONTO_MENSUAL;
+    const ahora = new Date();
+    const mesActual = ahora.getMonth() + 1;
+    const anioActual = ahora.getFullYear();
+    const resumenPagos = await Pago.getResumen(mesActual, anioActual);
+    const alumnos_pagados = resumenPagos.pagados_mes;
+    const ingresos_mes = Math.round(resumenPagos.ingresos_mes * 100) / 100;
 
     const diasSemana = ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'];
     const diaActual = diasSemana[new Date().getDay()];

@@ -1,9 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTituloPagina } from '../../hooks/useTituloPagina';
 import { getReportePagos } from '../../services/reporteService';
+import { getUsers } from '../../services/usuarioService';
 import ReportPDFPreview from '../../components/ReportPDFPreview';
 import Paginacion from '../../components/Paginacion';
 import CabeceraPagina from '../../components/CabeceraPagina';
+import AutocompleteUsuario from '../../components/AutocompleteUsuario';
 
 const MESES = [
   'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
@@ -32,6 +34,7 @@ function RecepcionReportes() {
   const [estado, setEstado] = useState('');
   const [turno, setTurno] = useState('');
   const [busqueda, setBusqueda] = useState('');
+  const [alumnos, setAlumnos] = useState([]);
   const [datos, setDatos] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -60,7 +63,20 @@ function RecepcionReportes() {
     }
   }, [mes, anio, estado, turno, busqueda]);
 
-  useEffect(() => { cargar(); }, []);
+  useEffect(() => {
+    const t = setTimeout(() => cargar(), 350);
+    return () => clearTimeout(t);
+  }, [cargar]);
+
+  useEffect(() => {
+    const cargarAlumnos = async () => {
+      try {
+        const data = await getUsers('Alumno');
+        setAlumnos(data.usuarios || []);
+      } catch {}
+    };
+    cargarAlumnos();
+  }, []);
 
   const construirDoc = () => ({
     titulo: `Reporte Mensual de Pagos — ${MESES[mes - 1]} ${anio}`,
@@ -167,15 +183,15 @@ function RecepcionReportes() {
           </div>
           <div className="flex-1 min-w-[180px]">
             <label className="block text-xs text-slate-500 mb-1">Buscar alumno</label>
-            <input type="text" placeholder="Nombre, correo o CI..." value={busqueda}
-              onChange={(e) => setBusqueda(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && cargar()}
-              className="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm" />
+            <AutocompleteUsuario
+              texto={busqueda}
+              onTexto={setBusqueda}
+              alumnos={alumnos}
+              onSubmit={cargar}
+              placeholder="Nombre, correo o CI..."
+            />
           </div>
-          <button onClick={cargar}
-            className="bg-gray-800 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-black">
-            Aplicar filtros
-          </button>
+          {loading && <span className="text-xs text-slate-500 ml-auto py-1">Actualizando…</span>}
         </div>
       </div>
 

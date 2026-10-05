@@ -28,9 +28,13 @@ const getHorarios = async (req, res) => {
 
 const getAsistencias = async (req, res) => {
   try {
-    const { fecha } = req.query;
+    const { fecha, fecha_inicio, fecha_fin } = req.query;
     const filtros = {};
     if (fecha) filtros.fecha = fecha;
+    if (fecha_inicio && fecha_fin) {
+      filtros.fecha_inicio = fecha_inicio;
+      filtros.fecha_fin = fecha_fin;
+    }
     const asistencias = await alumnoService.getAsistencias(req.usuario.id_usuario, filtros);
     return res.status(200).json({ asistencias });
   } catch (error) {

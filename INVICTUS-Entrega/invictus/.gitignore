@@ -1,3 +1,11 @@
 node_modules/
 dist/
 .env
+
+# Backups de base de datos: contienen datos reales de alumnos
+*.dump
+database/backups/
+
+# Archivos temporales y artefactos accidentales de consola
+*_TEMP.docx
+NUL

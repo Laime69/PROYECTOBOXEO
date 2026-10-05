@@ -50,7 +50,7 @@ function UserDetailModal({ userId, onClose }) {
     if (!['deportivos'].includes(activeTab)) return;
 
     setProgresoLoading(true);
-    getHistorialProgreso(usuario.id_usuario)
+    getHistorialProgreso(usuario.alumno_id || usuario.id_usuario)
       .then((res) => {
         const historial = res.historial || [];
         setHistorialProgreso(historial);

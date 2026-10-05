@@ -1,5 +1,5 @@
 const { Router } = require('express');
-const { list, marcarPagado, resumen, historialAlumno } = require('../controllers/pagoController');
+const { list, marcarPagado, resumen, historialAlumno, actualizarPago } = require('../controllers/pagoController');
 const { authMiddleware, roleMiddleware } = require('../middlewares/authMiddleware');
 
 const router = Router();
@@ -10,5 +10,6 @@ router.get('/', roleMiddleware('SuperAdmin', 'Administrador', 'Recepcionista'), 
 router.post('/marcar-pagado', roleMiddleware('SuperAdmin', 'Administrador', 'Recepcionista'), marcarPagado);
 router.get('/resumen', roleMiddleware('SuperAdmin', 'Administrador', 'Recepcionista'), resumen);
 router.get('/alumno/:id/historial', roleMiddleware('SuperAdmin', 'Administrador', 'Recepcionista', 'Alumno'), historialAlumno);
+router.patch('/:id', roleMiddleware('SuperAdmin', 'Administrador', 'Recepcionista'), actualizarPago);
 
 module.exports = router;

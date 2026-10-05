@@ -39,7 +39,7 @@ class AsistenciaService {
     if (!asistencia) {
       throw new Error('Asistencia no encontrada');
     }
-    if (currentUser && currentUser.rol === 'Entrenador' && asistencia.entrenador_id !== currentUser.id_usuario) {
+    if (currentUser && currentUser.rol === 'Entrenador' && asistencia.entrenador_id !== currentUser.id_entrenador) {
       throw new Error('No tienes permiso para ver esta asistencia');
     }
     return asistencia;
@@ -51,7 +51,10 @@ class AsistenciaService {
     }
 
     if (currentUser && currentUser.rol === 'Entrenador') {
-      data.entrenador_id = currentUser.id_usuario;
+      const estaEnMisHorarios = await this._esAlumnoDeEntrenador(data.alumno_id, currentUser.id_entrenador);
+      if (!estaEnMisHorarios) {
+        throw new Error('No puedes registrar asistencia de un alumno que no te corresponde');
+      }
     }
 
     if (!data.tipo_actividad && data.fecha) {
@@ -84,10 +87,9 @@ class AsistenciaService {
     }
 
     if (currentUser && currentUser.rol === 'Entrenador') {
-      if (existente.entrenador_id !== currentUser.id_usuario) {
+      if (existente.entrenador_id !== currentUser.id_entrenador) {
         throw new Error('No tienes permiso para modificar esta asistencia');
       }
-      data.entrenador_id = currentUser.id_usuario;
     }
     const updated = await Asistencia.update(id, data);
     return updated;
@@ -99,7 +101,7 @@ class AsistenciaService {
       throw new Error('Asistencia no encontrada');
     }
     if (currentUser && currentUser.rol === 'Entrenador') {
-      if (existente.entrenador_id !== currentUser.id_usuario) {
+      if (existente.entrenador_id !== currentUser.id_entrenador) {
         throw new Error('No tienes permiso para eliminar esta asistencia');
       }
     }
@@ -112,6 +114,20 @@ class AsistenciaService {
       return await Asistencia.countAllByEntrenador(currentUser.id_usuario);
     }
     return await Asistencia.countAll();
+  }
+
+  async _esAlumnoDeEntrenador(alumnoId, idEntrenador) {
+    if (!alumnoId) return false;
+    const asignacion = await AlumnoHorario.findActivoByAlumno(alumnoId);
+    if (asignacion && asignacion.entrenador_id === idEntrenador) {
+      return true;
+    }
+    const horarios = await Horario.findAll({ entrenador_id: idEntrenador, estado: 'activo' });
+    for (const h of horarios) {
+      const ah = await AlumnoHorario.findByHorarioAndAlumno(h.id_horario, alumnoId);
+      if (ah && ah.estado === 'activo') return true;
+    }
+    return false;
   }
 }
 

@@ -4,8 +4,8 @@ const bitacoraService = require('../services/bitacoraService');
 const list = async (req, res) => {
   try {
     const { mes, anio, estado, turno, busqueda } = req.query;
-    const pagos = await pagoService.list({ mes, anio, estado, turno, busqueda }, req.usuario);
-    return res.status(200).json({ pagos });
+    const data = await pagoService.list({ mes, anio, estado, turno, busqueda }, req.usuario);
+    return res.status(200).json(data);
   } catch (error) {
     console.error('[PagoController:list]', error);
     return res.status(500).json({ msg: 'Error interno del servidor' });
@@ -66,7 +66,7 @@ const resumen = async (req, res) => {
   try {
     const { mes, anio } = req.query;
     const data = await pagoService.getResumen({ mes, anio }, req.usuario);
-    return res.status(200).json({ resumen: data });
+    return res.status(200).json(data);
   } catch (error) {
     console.error('[PagoController:resumen]', error);
     return res.status(500).json({ msg: 'Error interno del servidor' });
@@ -90,4 +90,29 @@ const historialAlumno = async (req, res) => {
   }
 };
 
-module.exports = { list, marcarPagado, resumen, historialAlumno };
+const actualizarPago = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const pago = await pagoService.actualizarPago(parseInt(id), req.body || {});
+    bitacoraService.registrar({
+      usuario_id: req.usuario?.id_usuario,
+      rol: req.usuario?.rol,
+      accion: 'UPDATE',
+      modulo: 'pagos',
+      descripcion: `Pago actualizado: ID ${id}, alumno ${pago.alumno_id}`,
+      ip: req.ip,
+    });
+    return res.status(200).json({ msg: 'Pago actualizado correctamente', pago });
+  } catch (error) {
+    if (error.message === 'Pago no encontrado') {
+      return res.status(404).json({ msg: error.message });
+    }
+    if (error.message && (error.message.includes('no es válido') || error.message.includes('mayor a 0') || error.message.includes('vigente'))) {
+      return res.status(400).json({ msg: error.message });
+    }
+    console.error('[PagoController:actualizarPago]', error);
+    return res.status(500).json({ msg: 'Error interno del servidor' });
+  }
+};
+
+module.exports = { list, marcarPagado, resumen, historialAlumno, actualizarPago };

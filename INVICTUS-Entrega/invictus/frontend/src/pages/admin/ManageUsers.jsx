@@ -3,10 +3,13 @@ import { useTituloPagina } from '../../hooks/useTituloPagina';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { getUsers, updateUser, deleteUser } from '../../services/usuarioService';
+import { marcarPagado } from '../../services/pagoService';
 import { asignarTurno, cambiarTurno, getHorarioActual } from '../../services/alumnoHorarioService';
 import UserDetailModal from '../../components/UserDetailModal';
 import UserRoleFields from '../../components/UserRoleFields';
 import Paginacion from '../../components/Paginacion';
+import AutocompleteUsuario from '../../components/AutocompleteUsuario';
+import ActionButton from '../../components/ActionButton';
 
 const roleBadges = {
   SuperAdmin: 'bg-rose-50 text-rose-700 ring-rose-200',
@@ -60,7 +63,6 @@ function ManageUsers() {
   const [turnoAsignar, setTurnoAsignar] = useState('');
   const [turnoError, setTurnoError] = useState('');
   const [viewUserId, setViewUserId] = useState(null);
-  const [menuAbierto, setMenuAbierto] = useState(null);
   const [pagina, setPagina] = useState(1);
   const [porPagina, setPorPagina] = useState(10);
 
@@ -96,7 +98,6 @@ function ManageUsers() {
 
   useEffect(() => {
     setPagina(1);
-    setMenuAbierto(null);
   }, [busqueda, filtroRol]);
 
   /* ── Estadísticas de cabecera ── */
@@ -147,7 +148,7 @@ function ManageUsers() {
     setTurnoError('');
     if (user.rol === 'Alumno') {
       try {
-        const res = await getHorarioActual(user.id_usuario);
+        const res = await getHorarioActual(user.alumno_id);
         const h = res.horario;
         setTurnoAsignar(h?.turno || h?.turno_horario || '');
       } catch {
@@ -270,13 +271,11 @@ function ManageUsers() {
   const handleQuickPay = async (user) => {
     try {
       const hoy = new Date();
-      const vencimiento = new Date(hoy);
-      vencimiento.setDate(vencimiento.getDate() + 30);
-
-      await updateUser(user.id_usuario, {
-        estado_pago: 'pagado',
-        fecha_inscripcion: hoy.toISOString().slice(0, 10),
-        fecha_vencimiento: vencimiento.toISOString().slice(0, 10),
+      await marcarPagado({
+        alumno_id: user.alumno_id,
+        mes: hoy.getMonth() + 1,
+        anio: hoy.getFullYear(),
+        fecha_pago: hoy.toISOString().slice(0, 10),
       });
       setSuccess(`"${user.nombre}" marcado como pagado`);
       fetchUsers();
@@ -319,8 +318,6 @@ function ManageUsers() {
   const puedeEliminar = (u) =>
     u.id_usuario !== user?.id && u.rol !== 'SuperAdmin' && (isSuperAdmin || u.rol !== 'Administrador');
 
-  const itemMenu = 'w-full flex items-center gap-2.5 px-4 py-2 text-sm text-left transition-colors';
-
   return (
     <div>
       {/* ── Cabecera de gestión ── */}
@@ -346,15 +343,11 @@ function ManageUsers() {
       {/* ── Barra de herramientas ── */}
       <div className="bg-white rounded-xl shadow-card border border-gray-200/70 transition-all duration-200 p-3 mb-5 flex flex-wrap items-center gap-2">
         <div className="relative flex-1 min-w-[220px]">
-          <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-          </svg>
-          <input
-            type="text"
-            value={busqueda}
-            onChange={(e) => setBusqueda(e.target.value)}
+          <AutocompleteUsuario
+            texto={busqueda}
+            onTexto={setBusqueda}
+            usuarios={usuarios}
             placeholder="Buscar por nombre, CI o correo..."
-            className="w-full border border-gray-300 rounded-lg pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-invictus-500"
           />
         </div>
 
@@ -445,60 +438,19 @@ function ManageUsers() {
                         </span>
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-right relative">
-                      <button
-                        onClick={() => setMenuAbierto(menuAbierto === u.id_usuario ? null : u.id_usuario)}
-                        aria-label={`Acciones de ${u.nombre}`}
-                        aria-haspopup="menu"
-                        aria-expanded={menuAbierto === u.id_usuario}
-                        className={`p-1.5 rounded-lg transition-colors ${
-                          menuAbierto === u.id_usuario ? 'bg-slate-100 text-slate-700' : 'text-slate-400 hover:bg-slate-100 hover:text-slate-700'
-                        }`}
-                        title="Más acciones"
-                      >
-                        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                          <circle cx="5" cy="12" r="1.8" /><circle cx="12" cy="12" r="1.8" /><circle cx="19" cy="12" r="1.8" />
-                        </svg>
-                      </button>
-
-                      {menuAbierto === u.id_usuario && (
-                        <>
-                          <div className="fixed inset-0 z-40" onClick={() => setMenuAbierto(null)} />
-                          <div className="absolute right-4 top-full mt-1 w-52 bg-white rounded-xl shadow-xl border border-gray-100 py-1.5 z-50 text-left">
-                            <button onClick={() => { setViewUserId(u.id_usuario); setMenuAbierto(null); }}
-                              className={`${itemMenu} hover:bg-slate-50 text-[#172033]`}>
-                              <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
-                              Ver perfil
-                            </button>
-                            <button onClick={() => { openEdit(u); setMenuAbierto(null); }}
-                              className={`${itemMenu} hover:bg-slate-50 text-[#172033]`}>
-                              <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
-                              Editar usuario
-                            </button>
-                            {u.rol === 'Alumno' && u.estado_pago !== 'pagado' && (
-                              <button onClick={() => { handleQuickPay(u); setMenuAbierto(null); }}
-                                className={`${itemMenu} hover:bg-green-50 text-green-700`}>
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                                Marcar pagado
-                              </button>
-                            )}
-                            <button onClick={() => { toggleEstado(u); setMenuAbierto(null); }}
-                              className={`${itemMenu} hover:bg-slate-50 text-[#172033]`}>
-                              <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={u.estado === 'activo' ? 'M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636' : 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z'} /></svg>
-                              {u.estado === 'activo' ? 'Desactivar' : 'Activar'}
-                            </button>
-                            {puedeEliminar(u) && (
-                              <>
-                                <div className="my-1 border-t border-gray-100" />
-                                <button onClick={() => { handleDelete(u.id_usuario, u.nombre, u.rol); setMenuAbierto(null); }}
-                                  className={`${itemMenu} hover:bg-red-50 text-red-600`}>
-                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                                  Eliminar
-                                </button>
-                              </>
-                            )}
-                          </div>
-                        </>
+                    <td className="px-4 py-3 text-right whitespace-nowrap space-x-1.5">
+                      <ActionButton tipo="ver" onClick={() => setViewUserId(u.id_usuario)} />
+                      <ActionButton tipo="editar" onClick={() => openEdit(u)} />
+                      {u.rol === 'Alumno' && u.estado_pago !== 'pagado' && (
+                        <ActionButton tipo="pagado" onClick={() => handleQuickPay(u)} />
+                      )}
+                      <ActionButton
+                        tipo="estado"
+                        titulo={u.estado === 'activo' ? 'Desactivar usuario' : 'Activar usuario'}
+                        onClick={() => toggleEstado(u)}
+                      />
+                      {puedeEliminar(u) && (
+                        <ActionButton tipo="eliminar" onClick={() => handleDelete(u.id_usuario, u.nombre, u.rol)} />
                       )}
                     </td>
                   </tr>

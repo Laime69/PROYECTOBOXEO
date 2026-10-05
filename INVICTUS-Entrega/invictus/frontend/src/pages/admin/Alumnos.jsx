@@ -1,10 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useTituloPagina } from '../../hooks/useTituloPagina';
 import { getUsers, updateUser } from '../../services/usuarioService';
+import { marcarPagado } from '../../services/pagoService';
+import AutocompleteUsuario from '../../components/AutocompleteUsuario';
 import { getHorarioActual } from '../../services/alumnoHorarioService';
 import UserDetailModal from '../../components/UserDetailModal';
 import ActionButton from '../../components/ActionButton';
 import CabeceraPagina from '../../components/CabeceraPagina';
+import ModalEditarAlumno from '../../components/ModalEditarAlumno';
 
 const NOMBRES_TURNO = { manana: 'Mañana', tarde: 'Tarde', noche: 'Noche' };
 
@@ -18,6 +21,7 @@ function Alumnos() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [viewUserId, setViewUserId] = useState(null);
+  const [editando, setEditando] = useState(null);
   const [busqueda, setBusqueda] = useState('');
   const [filtroEstadoPago, setFiltroEstadoPago] = useState('');
   const [filtroTurno, setFiltroTurno] = useState('');
@@ -42,7 +46,7 @@ function Alumnos() {
       const alumnosConHorario = await Promise.all(
         data.usuarios.map(async (a) => {
           try {
-            const res = await getHorarioActual(a.id_usuario);
+            const res = await getHorarioActual(a.alumno_id);
             return { ...a, horario_asignado: res.horario };
           } catch {
             return { ...a, horario_asignado: null };
@@ -80,12 +84,11 @@ function Alumnos() {
   const handleQuickPay = async (alumno) => {
     try {
       const hoy = new Date();
-      const vencimiento = new Date(hoy);
-      vencimiento.setDate(vencimiento.getDate() + 30);
-      await updateUser(alumno.id_usuario, {
-        estado_pago: 'pagado',
-        fecha_inscripcion: hoy.toISOString().slice(0, 10),
-        fecha_vencimiento: vencimiento.toISOString().slice(0, 10),
+      await marcarPagado({
+        alumno_id: alumno.alumno_id,
+        mes: hoy.getMonth() + 1,
+        anio: hoy.getFullYear(),
+        fecha_pago: hoy.toISOString().slice(0, 10),
       });
       setSuccess(`Pago registrado: ${alumno.nombre}`);
       fetchAlumnos();
@@ -110,6 +113,8 @@ function Alumnos() {
     return asignacion.nombre_turno || '—';
   };
 
+  const openEdit = (a) => setEditando(a);
+
   const formatDate = (date) => {
     if (!date) return '—';
     return new Date(date).toLocaleDateString('es-ES', {
@@ -123,10 +128,10 @@ function Alumnos() {
         titulo="Alumnos"
         subtitulo="Padrón de deportistas registrados en la academia"
         stats={[
-          { valor: alumnos.length, etiqueta: 'alumnos', color: 'text-[#172033]' },
-          { valor: alumnos.filter((a) => a.estado === 'activo').length, etiqueta: 'activos', color: 'text-green-600' },
-          { valor: alumnos.filter((a) => a.estado_pago === 'pagado').length, etiqueta: 'al día', color: 'text-emerald-600' },
-          { valor: alumnos.filter((a) => a.estado_pago === 'pendiente').length, etiqueta: 'pendientes', color: 'text-amber-600' },
+          { valor: alumnosFiltrados.length, etiqueta: 'alumnos', color: 'text-[#172033]' },
+          { valor: alumnosFiltrados.filter((a) => a.estado === 'activo').length, etiqueta: 'activos', color: 'text-green-600' },
+          { valor: alumnosFiltrados.filter((a) => a.estado_pago === 'pagado').length, etiqueta: 'al día', color: 'text-emerald-600' },
+          { valor: alumnosFiltrados.filter((a) => a.estado_pago === 'pendiente').length, etiqueta: 'pendientes', color: 'text-amber-600' },
         ]}
       />
 
@@ -142,18 +147,12 @@ function Alumnos() {
         <div className="flex flex-wrap items-end gap-x-5 gap-y-3">
           <div className="flex-1 min-w-[230px]">
             <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Buscar alumno</label>
-            <div className="relative">
-              <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-              <input
-                type="text"
-                value={busqueda}
-                onChange={(e) => setBusqueda(e.target.value)}
-                placeholder="Nombre, correo, CI o celular..."
-                className="w-full border border-gray-300 rounded-lg pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-invictus-500"
-              />
-            </div>
+            <AutocompleteUsuario
+              texto={busqueda}
+              onTexto={setBusqueda}
+              usuarios={alumnos}
+              placeholder="Nombre, correo, CI o celular..."
+            />
           </div>
           <div>
             <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Estado de pago</label>
@@ -231,6 +230,7 @@ function Alumnos() {
                   <td className="px-4 py-3 text-right">
                     <div className="flex items-center justify-end gap-1.5">
                       <ActionButton tipo="ver" onClick={() => setViewUserId(a.id_usuario)} />
+                      <ActionButton tipo="editar" onClick={() => openEdit(a)} titulo={`Editar a ${a.nombre}`} />
                       {a.estado_pago !== 'pagado' && (
                         <ActionButton tipo="pagado" onClick={() => handleQuickPay(a)} titulo={`Marcar pago de ${a.nombre}`} />
                       )}
@@ -245,6 +245,14 @@ function Alumnos() {
 
       {viewUserId && (
         <UserDetailModal userId={viewUserId} onClose={() => setViewUserId(null)} />
+      )}
+
+      {editando && (
+        <ModalEditarAlumno
+          alumno={editando}
+          onClose={() => setEditando(null)}
+          onGuardado={(msg) => { setSuccess(msg); fetchAlumnos(); }}
+        />
       )}
     </div>
   );

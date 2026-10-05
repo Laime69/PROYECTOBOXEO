@@ -1,0 +1,8 @@
+# Artefactos accidentales de redireccion de consola en Git Bash
+/cd
+/git
+/main
+/NUL
+
+# Documentos temporales de trabajo
+*_TEMP.docx

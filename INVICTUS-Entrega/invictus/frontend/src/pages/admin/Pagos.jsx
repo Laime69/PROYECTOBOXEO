@@ -1,7 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useTituloPagina } from '../../hooks/useTituloPagina';
-import { getPagos, marcarPagado, getResumenPagos, getHistorialAlumno } from '../../services/pagoService';
+import { getPagos, marcarPagado, actualizarPago, getResumenPagos, getHistorialAlumno } from '../../services/pagoService';
+import { getUsers } from '../../services/usuarioService';
+import { useAuth } from '../../context/AuthContext';
 import CabeceraPagina from '../../components/CabeceraPagina';
+import ReportPDFPreview from '../../components/ReportPDFPreview';
+import ActionButton from '../../components/ActionButton';
 
 const MESES = [
   'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
@@ -19,6 +23,7 @@ const formatMonto = (valor) => {
 
 function Pagos() {
   useTituloPagina('Gestión de Pagos');
+  const { user } = useAuth();
   const hoy = new Date();
   const [mes, setMes] = useState(hoy.getMonth() + 1);
   const [anio, setAnio] = useState(hoy.getFullYear());
@@ -30,13 +35,25 @@ function Pagos() {
   const [filtroEstado, setFiltroEstado] = useState('');
   const [filtroTurno, setFiltroTurno] = useState('');
   const [busqueda, setBusqueda] = useState('');
+  const [esFuturo, setEsFuturo] = useState(false);
+
+  const [alumnos, setAlumnos] = useState([]);
+  const [autocompleteAbierto, setAutocompleteAbierto] = useState(false);
+  const [autocompleteIdx, setAutocompleteIdx] = useState(0);
+  const [alumnoSeleccionado, setAlumnoSeleccionado] = useState(null);
+  const busquedaRef = useRef(null);
+  const sugerenciasRef = useRef(null);
 
   const [showPagoModal, setShowPagoModal] = useState(false);
+  const [modoPago, setModoPago] = useState('registrar');
   const [selectedAlumno, setSelectedAlumno] = useState(null);
+  const [selectedPagoId, setSelectedPagoId] = useState(null);
   const [formPago, setFormPago] = useState({
     monto: '200',
+    estado: 'pagado',
     metodo_pago: 'efectivo',
     fecha_pago: hoy.toISOString().slice(0, 10),
+    fecha_vencimiento: '',
     observacion: '',
   });
 
@@ -44,6 +61,9 @@ function Pagos() {
   const [historialAlumnoData, setHistorialAlumnoData] = useState([]);
   const [historialNombre, setHistorialNombre] = useState('');
   const [historialLoading, setHistorialLoading] = useState(false);
+
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [docPreview, setDocPreview] = useState(null);
 
   const fetchPagos = async () => {
     setLoading(true);
@@ -54,6 +74,7 @@ function Pagos() {
       if (busqueda.trim()) params.busqueda = busqueda.trim();
       const data = await getPagos(params);
       setPagos(data.pagos || []);
+      setEsFuturo(Boolean(data.es_futuro));
     } catch (err) {
       const msg = err?.response?.data?.msg || 'Error al cargar pagos';
       setError(msg);
@@ -66,6 +87,7 @@ function Pagos() {
     try {
       const data = await getResumenPagos({ mes, anio });
       setResumen(data.resumen);
+      setEsFuturo(Boolean(data.es_futuro));
     } catch {}
   };
 
@@ -84,6 +106,99 @@ function Pagos() {
   }, [busqueda]);
 
   useEffect(() => {
+    const cargarAlumnos = async () => {
+      try {
+        const data = await getUsers('Alumno');
+        setAlumnos(data.usuarios || []);
+      } catch {}
+    };
+    cargarAlumnos();
+  }, []);
+
+  const sugerencias = useMemo(() => {
+    const q = busqueda.trim().toLowerCase();
+    if (!q) return [];
+    return alumnos
+      .filter((a) => (
+        `${a.nombre || ''} ${a.correo || ''} ${a.ci || ''}`.toLowerCase().includes(q)
+      ))
+      .slice(0, 8);
+  }, [alumnos, busqueda]);
+
+  const seleccionarAlumno = (alumno) => {
+    setBusqueda(alumno.nombre || '');
+    setAlumnoSeleccionado(alumno);
+    setAutocompleteAbierto(false);
+    setAutocompleteIdx(0);
+  };
+
+  const pagosVisibles = useMemo(() => {
+    const q = busqueda.trim().toLowerCase();
+    if (!q) return pagos;
+    return pagos.filter((p) =>
+      `${p.alumno_nombre || ''} ${p.alumno_correo || ''}`.toLowerCase().includes(q)
+    );
+  }, [pagos, busqueda]);
+
+  useEffect(() => {
+    const manejarClick = (e) => {
+      const enInput = busquedaRef.current?.contains(e.target);
+      const enSugerencias = sugerenciasRef.current?.contains(e.target);
+      if (!enInput && !enSugerencias) setAutocompleteAbierto(false);
+    };
+    document.addEventListener('mousedown', manejarClick);
+    return () => document.removeEventListener('mousedown', manejarClick);
+  }, []);
+
+  const manejarTeclaBusqueda = (e) => {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      if (!autocompleteAbierto) {
+        setAutocompleteAbierto(true);
+        return;
+      }
+      setAutocompleteIdx((i) => Math.min(i + 1, sugerencias.length - 1));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setAutocompleteIdx((i) => Math.max(i - 1, 0));
+    } else if (e.key === 'Enter') {
+      if (autocompleteAbierto && sugerencias[autocompleteIdx]) {
+        e.preventDefault();
+        seleccionarAlumno(sugerencias[autocompleteIdx]);
+      } else {
+        setAutocompleteAbierto(false);
+        setAlumnoSeleccionado(null);
+      }
+    } else if (e.key === 'Escape') {
+      setAutocompleteAbierto(false);
+    }
+  };
+
+const resumenEfectivo = useMemo(() => {
+    if (esFuturo) return null;
+    const hayConsulta = Boolean(busqueda.trim() || alumnoSeleccionado);
+    if (hayConsulta) {
+      const pagados = pagosVisibles.filter((p) => p.estado === 'pagado').length;
+      const vencidos = pagosVisibles.filter((p) => p.estado === 'vencido').length;
+      const pendientes = pagosVisibles.length - pagados - vencidos;
+      const ingresos = pagosVisibles
+        .filter((p) => p.estado === 'pagado')
+        .reduce((acc, p) => acc + (Number(p.monto) || 0), 0);
+      return {
+        total_alumnos: pagosVisibles.length,
+        pagados_mes: pagados,
+        pendientes_mes: pendientes < 0 ? 0 : pendientes,
+        vencidos,
+        ingresos_mes: ingresos,
+        inscritos_hoy: null,
+        inscritos_semana: null,
+        inscritos_mes: null,
+      };
+    }
+    return resumen;
+  }, [busqueda, alumnoSeleccionado, pagosVisibles, resumen, esFuturo]);
+
+  useEffect(() => {
     if (success) {
       const t = setTimeout(() => setSuccess(''), 3000);
       return () => clearTimeout(t);
@@ -99,11 +214,30 @@ function Pagos() {
 
   const openPagoModal = (alumno) => {
     setSelectedAlumno(alumno);
+    setSelectedPagoId(null);
+    setModoPago('registrar');
     setFormPago({
       monto: '200',
+      estado: 'pagado',
       metodo_pago: 'efectivo',
       fecha_pago: new Date().toISOString().slice(0, 10),
+      fecha_vencimiento: '',
       observacion: '',
+    });
+    setShowPagoModal(true);
+  };
+
+  const openEditarPago = (p) => {
+    setSelectedAlumno(p);
+    setSelectedPagoId(p.id_pago);
+    setModoPago('editar');
+    setFormPago({
+      monto: p.monto ? String(p.monto) : '200',
+      estado: p.estado || 'pagado',
+      metodo_pago: p.metodo_pago || 'efectivo',
+      fecha_pago: p.fecha_pago ? String(p.fecha_pago).slice(0, 10) : '',
+      fecha_vencimiento: p.fecha_vencimiento ? String(p.fecha_vencimiento).slice(0, 10) : '',
+      observacion: p.observacion || '',
     });
     setShowPagoModal(true);
   };
@@ -112,16 +246,28 @@ function Pagos() {
     e.preventDefault();
     if (!selectedAlumno) return;
     try {
-      await marcarPagado({
-        alumno_id: selectedAlumno.alumno_id,
-        mes,
-        anio,
-        monto: parseFloat(formPago.monto),
-        metodo_pago: formPago.metodo_pago,
-        fecha_pago: formPago.fecha_pago,
-        observacion: formPago.observacion || null,
-      });
-      setSuccess(`Pago registrado: ${selectedAlumno.alumno_nombre}`);
+      if (modoPago === 'editar' && selectedPagoId) {
+        await actualizarPago(selectedPagoId, {
+          monto: parseFloat(formPago.monto),
+          estado: formPago.estado,
+          metodo_pago: formPago.metodo_pago,
+          fecha_pago: formPago.fecha_pago || null,
+          fecha_vencimiento: formPago.fecha_vencimiento || null,
+          observacion: formPago.observacion || null,
+        });
+        setSuccess(`Pago actualizado: ${selectedAlumno.alumno_nombre}`);
+      } else {
+        await marcarPagado({
+          alumno_id: selectedAlumno.alumno_id,
+          mes,
+          anio,
+          monto: parseFloat(formPago.monto),
+          metodo_pago: formPago.metodo_pago,
+          fecha_pago: formPago.fecha_pago,
+          observacion: formPago.observacion || null,
+        });
+        setSuccess(`Pago registrado: ${selectedAlumno.alumno_nombre}`);
+      }
       setShowPagoModal(false);
       fetchPagos();
       fetchResumen();
@@ -129,6 +275,33 @@ function Pagos() {
       const msg = err?.response?.data?.msg || 'Error al registrar pago';
       setError(msg);
     }
+  };
+
+  const imprimirComprobante = (p) => {
+    const w = window.open('', '_blank');
+    if (!w) return;
+    w.document.write(`
+      <html><head><title>Comprobante INVICTUS</title>
+      <style>body{font-family:Arial,sans-serif;max-width:400px;margin:40px auto;padding:20px;border:2px solid #333}
+      h2{text-align:center;border-bottom:2px solid #333;padding-bottom:10px;margin-bottom:20px}
+      .row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px dashed #ccc}
+      .label{color:#666;font-size:13px}.value{font-weight:bold;font-size:14px}
+      .total{font-size:18px;text-align:right;margin-top:15px;padding-top:10px;border-top:2px solid #333}
+      .footer{text-align:center;margin-top:30px;font-size:11px;color:#999}</style></head><body>
+      <h2>🥊 INVICTUS BOXEO</h2>
+      <p style="text-align:center;color:#666;font-size:12px">COMPROBANTE DE PAGO</p>
+      <div class="row"><span class="label">Alumno:</span><span class="value">${p.alumno_nombre || ''}</span></div>
+      <div class="row"><span class="label">Mes:</span><span class="value">${MESES[p.mes - 1]} ${p.anio}</span></div>
+      <div class="row"><span class="label">Estado:</span><span class="value">Pagado</span></div>
+      <div class="row"><span class="label">Monto:</span><span class="value">Bs ${formatMonto(p.monto)}</span></div>
+      <div class="row"><span class="label">Método:</span><span class="value">${p.metodo_pago || '—'}</span></div>
+      <div class="row"><span class="label">Fecha pago:</span><span class="value">${formatDate(p.fecha_pago)}</span></div>
+      <div class="row"><span class="label">Vencimiento:</span><span class="value">${formatDate(p.fecha_vencimiento)}</span></div>
+      <div class="total"><strong>TOTAL: Bs ${formatMonto(p.monto)}</strong></div>
+      <div class="footer">Invictus Boxeo Academy<br>${new Date().toLocaleDateString('es-ES')}</div>
+      </body></html>`);
+    w.document.close();
+    w.print();
   };
 
   const openHistorial = async (alumno) => {
@@ -170,19 +343,82 @@ function Pagos() {
     setBusqueda('');
     setFiltroEstado('');
     setFiltroTurno('');
+    setAlumnoSeleccionado(null);
+    setAutocompleteAbierto(false);
   };
 
-  const hayFiltrosActivos = Boolean(busqueda.trim() || filtroEstado || filtroTurno);
+  const hayFiltrosActivos = Boolean(busqueda.trim() || filtroEstado || filtroTurno || alumnoSeleccionado);
+
+  const construirDocPagos = () => {
+    const pagados = pagosVisibles.filter((p) => p.estado === 'pagado').length;
+    const vencidos = pagosVisibles.filter((p) => p.estado === 'vencido').length;
+    const pendientes = pagosVisibles.length - pagados - vencidos;
+    const ingresos = pagosVisibles
+      .filter((p) => p.estado === 'pagado')
+      .reduce((acc, p) => acc + (Number(p.monto) || 0), 0);
+    return {
+      titulo: 'Planilla de Pagos y Mensualidades',
+      periodo: `${MESES[mes - 1]} ${anio}`,
+      generadoPor: user?.nombre || '',
+      filtros: [
+        { etiqueta: 'Período', valor: `${MESES[mes - 1]} ${anio}` },
+        { etiqueta: 'Estado', valor: filtroEstado ? getLabelEstado(filtroEstado) : 'Todos' },
+        { etiqueta: 'Turno', valor: filtroTurno ? NOMBRES_TURNO[filtroTurno] : 'Todos' },
+        { etiqueta: 'Búsqueda', valor: busqueda.trim() || '—' },
+      ],
+      resumen: [
+        { etiqueta: 'Alumnos listados', valor: pagosVisibles.length },
+        { etiqueta: 'Pagados', valor: pagados, color: '#15803d' },
+        { etiqueta: 'Pendientes', valor: pendientes < 0 ? 0 : pendientes, color: '#b45309' },
+        { etiqueta: 'Vencidos', valor: vencidos, color: '#b91c1c' },
+        { etiqueta: 'Ingresos Bs.', valor: formatMonto(ingresos), color: '#1d4ed8' },
+      ],
+      secciones: [
+        {
+          titulo: 'Detalle por alumno',
+          columnas: ['#', 'Alumno', 'Turno', 'Estado', 'Monto', 'Fecha Pago', 'Vencimiento', 'Método'],
+          filas: pagosVisibles.map((p, i) => [
+            i + 1,
+            p.alumno_nombre,
+            p.turno ? NOMBRES_TURNO[p.turno] || p.turno : '—',
+            getLabelEstado(p.estado),
+            p.estado === 'pagado' ? `Bs ${formatMonto(p.monto)}` : '—',
+            p.estado === 'pagado' ? formatDate(p.fecha_pago) : '—',
+            formatDate(p.fecha_vencimiento),
+            p.metodo_pago || '—',
+          ]),
+        },
+      ],
+    };
+  };
+
+  const abrirPreview = () => {
+    setDocPreview(construirDocPagos());
+    setPreviewOpen(true);
+  };
 
   return (
+    <>
     <div>
       <CabeceraPagina
         titulo="Gestión de Pagos"
         subtitulo="Control mensual de mensualidades e inscripciones"
-        acciones={resumen && (
-          <span className="inline-flex items-center gap-1.5 bg-invictus-50 border border-invictus-200 rounded-lg px-3 py-1.5 text-xs font-semibold text-invictus-700">
-            📅 {MESES[mes - 1]} {anio}
-          </span>
+        acciones={(
+          <div className="flex items-center gap-2">
+            {!esFuturo && (
+              <button
+                onClick={abrirPreview}
+                disabled={loading || pagosVisibles.length === 0}
+                className="bg-invictus-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-invictus-700 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a2 2 0 00-.586-1.414l-5.414-5.414A2 2 0 0011.586 2H7a2 2 0 00-2 2v15a2 2 0 002 2z" /></svg>
+                Vista previa PDF
+              </button>
+            )}
+            <span className="inline-flex items-center gap-1.5 bg-invictus-50 border border-invictus-200 rounded-lg px-3 py-1.5 text-xs font-semibold text-invictus-700">
+              📅 {MESES[mes - 1]} {anio}
+            </span>
+          </div>
         )}
       />
 
@@ -236,12 +472,41 @@ function Pagos() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
               <input
+                ref={busquedaRef}
                 type="text"
                 value={busqueda}
-                onChange={(e) => setBusqueda(e.target.value)}
+                onChange={(e) => {
+                  setBusqueda(e.target.value);
+                  setAlumnoSeleccionado(null);
+                  setAutocompleteAbierto(true);
+                  setAutocompleteIdx(0);
+                }}
+                onFocus={() => { if (sugerencias.length > 0) setAutocompleteAbierto(true); }}
+                onKeyDown={manejarTeclaBusqueda}
                 placeholder="Nombre, correo o CI..."
                 className="w-full border border-gray-300 rounded-lg pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-invictus-500"
               />
+              {autocompleteAbierto && sugerencias.length > 0 && (
+                <ul ref={sugerenciasRef} className="absolute z-20 mt-1 w-full max-h-72 overflow-y-auto bg-white border border-gray-200 rounded-lg shadow-xl">
+                  {sugerencias.map((a, i) => (
+                    <li key={a.id_usuario}>
+                      <button
+                        type="button"
+                        onMouseEnter={() => setAutocompleteIdx(i)}
+                        onClick={() => seleccionarAlumno(a)}
+                        className={`w-full text-left px-3 py-2 text-sm border-b border-gray-50 last:border-0 ${
+                          i === autocompleteIdx ? 'bg-invictus-50 text-invictus-800 font-medium' : 'text-[#172033]'
+                        }`}
+                      >
+                        <span className="block">{a.nombre}</span>
+                        <span className="block text-xs text-slate-400">
+                          {a.correo || '—'}{a.ci ? ` · CI: ${a.ci}` : ''}
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
           </div>
 
@@ -257,77 +522,90 @@ function Pagos() {
       {error && <div className="mb-4 bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-700">{error}</div>}
       {success && <div className="mb-4 bg-green-50 border border-green-200 rounded-lg px-4 py-3 text-sm text-green-700">{success}</div>}
 
-      {resumen && (
+      {esFuturo && (
+        <div className="mb-5 bg-amber-50 border border-amber-200 rounded-xl px-4 py-4 text-sm text-amber-800 flex items-center gap-3">
+          <span className="text-xl">📅</span>
+          <span>
+            <strong>{MESES[mes - 1]} {anio}</strong> es un período futuro y aún no tiene movimientos.
+            No se muestran registros en períodos futuros; selecciona el mes y año actual o uno anterior.
+          </span>
+        </div>
+      )}
+
+      {!esFuturo && resumenEfectivo && (
         <>
           <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-4">
             <div className="bg-white rounded-xl shadow-card border border-gray-200/70 transition-all duration-200 border-l-4 border-l-blue-500 p-4">
               <p className="text-xs text-slate-500 font-medium">Total Alumnos</p>
-              <p className="text-2xl font-bold text-[#172033] mt-1">{resumen.total_alumnos}</p>
+              <p className="text-2xl font-bold text-[#172033] mt-1">{resumenEfectivo.total_alumnos}</p>
             </div>
             <div className="bg-white rounded-xl shadow-card border border-gray-200/70 transition-all duration-200 border-l-4 border-l-green-500 p-4">
               <p className="text-xs text-slate-500 font-medium">Pagados del Mes</p>
-              <p className="text-2xl font-bold text-green-600 mt-1">{resumen.pagados_mes}</p>
+              <p className="text-2xl font-bold text-green-600 mt-1">{resumenEfectivo.pagados_mes}</p>
             </div>
             <div className="bg-white rounded-xl shadow-card border border-gray-200/70 transition-all duration-200 border-l-4 border-l-amber-500 p-4">
               <p className="text-xs text-slate-500 font-medium">Pendientes</p>
-              <p className="text-2xl font-bold text-amber-600 mt-1">{resumen.pendientes_mes}</p>
+              <p className="text-2xl font-bold text-amber-600 mt-1">{resumenEfectivo.pendientes_mes}</p>
             </div>
             <div className="bg-white rounded-xl shadow-card border border-gray-200/70 transition-all duration-200 border-l-4 border-l-red-500 p-4">
               <p className="text-xs text-slate-500 font-medium">Vencidos</p>
-              <p className="text-2xl font-bold text-red-600 mt-1">{resumen.vencidos}</p>
+              <p className="text-2xl font-bold text-red-600 mt-1">{resumenEfectivo.vencidos}</p>
             </div>
             <div className="bg-white rounded-xl shadow-card border border-gray-200/70 transition-all duration-200 border-l-4 border-l-violet-500 p-4">
               <p className="text-xs text-slate-500 font-medium">Ingresos del Mes</p>
-              <p className="text-2xl font-bold text-[#172033] mt-1">Bs {formatMonto(resumen.ingresos_mes)}</p>
+              <p className="text-2xl font-bold text-[#172033] mt-1">Bs {formatMonto(resumenEfectivo.ingresos_mes)}</p>
             </div>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 text-sm text-blue-800 flex items-center gap-2">
-              <span className="font-semibold">Inscritos hoy:</span>
-              <span className="text-lg font-bold">{resumen.inscritos_hoy}</span>
+          {!alumnoSeleccionado && !busqueda.trim() && (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+              <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 text-sm text-blue-800 flex items-center gap-2">
+                <span className="font-semibold">Inscritos hoy:</span>
+                <span className="text-lg font-bold">{resumenEfectivo.inscritos_hoy}</span>
+              </div>
+              <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 text-sm text-blue-800 flex items-center gap-2">
+                <span className="font-semibold">Inscritos esta semana:</span>
+                <span className="text-lg font-bold">{resumenEfectivo.inscritos_semana}</span>
+              </div>
+              <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 text-sm text-blue-800 flex items-center gap-2">
+                <span className="font-semibold">Inscritos este mes:</span>
+                <span className="text-lg font-bold">{resumenEfectivo.inscritos_mes}</span>
+              </div>
             </div>
-            <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 text-sm text-blue-800 flex items-center gap-2">
-              <span className="font-semibold">Inscritos esta semana:</span>
-              <span className="text-lg font-bold">{resumen.inscritos_semana}</span>
-            </div>
-            <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 text-sm text-blue-800 flex items-center gap-2">
-              <span className="font-semibold">Inscritos este mes:</span>
-              <span className="text-lg font-bold">{resumen.inscritos_mes}</span>
-            </div>
-          </div>
+          )}
         </>
       )}
 
       {error && <div className="mb-4 bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-700">{error}</div>}
       {success && <div className="mb-4 bg-green-50 border border-green-200 rounded-lg px-4 py-3 text-sm text-green-700">{success}</div>}
 
-      <div className="bg-white rounded-xl shadow-card border border-gray-200/70 transition-all duration-200 overflow-hidden">
-        {loading ? (
-          <div className="flex justify-center py-12">
-            <div className="w-8 h-8 border-4 border-invictus-200 border-t-invictus-600 rounded-full animate-spin" />
-          </div>
-        ) : pagos.length === 0 ? (
-          <div className="text-center py-12 text-slate-500">No hay alumnos registrados</div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[900px]">
-              <thead>
-                <tr className="text-left text-[11px] uppercase tracking-wider text-slate-400 border-b border-gray-200 bg-slate-50">
-                  <th className="px-4 py-3 font-semibold">Nombre</th>
-                  <th className="px-4 py-3 font-semibold">Turno</th>
-                  <th className="px-4 py-3 font-semibold text-center">Mes</th>
-                  <th className="px-4 py-3 font-semibold">Estado</th>
-                  <th className="px-4 py-3 font-semibold text-right">Monto</th>
-                  <th className="px-4 py-3 font-semibold">Inscripción</th>
-                  <th className="px-4 py-3 font-semibold">Fecha Pago</th>
-                  <th className="px-4 py-3 font-semibold">Vencimiento</th>
-                  <th className="px-4 py-3 font-semibold">Método</th>
-                  <th className="px-4 py-3 font-semibold text-right">Acción</th>
-                </tr>
-              </thead>
-              <tbody>
-                {pagos.map((p) => (
-                  <tr key={`${p.alumno_id}_${p.mes}_${p.anio}`} className="border-b border-gray-50 hover:bg-gray-50">
+      {!esFuturo && (
+        <div className="bg-white rounded-xl shadow-card border border-gray-200/70 transition-all duration-200 overflow-hidden">
+          {loading ? (
+            <div className="flex justify-center py-12">
+              <div className="w-8 h-8 border-4 border-invictus-200 border-t-invictus-600 rounded-full animate-spin" />
+            </div>
+          ) : pagosVisibles.length === 0 ? (
+            <div className="text-center py-12 text-slate-500">No hay alumnos que coincidan con el período o la búsqueda</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[900px]">
+                <thead>
+                  <tr className="text-left text-[11px] uppercase tracking-wider text-slate-400 border-b border-gray-200 bg-slate-50">
+                    <th className="px-4 py-3 font-semibold">Nombre</th>
+                    <th className="px-4 py-3 font-semibold">Turno</th>
+                    <th className="px-4 py-3 font-semibold text-center">Mes</th>
+                    <th className="px-4 py-3 font-semibold">Estado</th>
+                    <th className="px-4 py-3 font-semibold text-right">Monto</th>
+                    <th className="px-4 py-3 font-semibold">Inscripción</th>
+                    <th className="px-4 py-3 font-semibold">Fecha Pago</th>
+                    <th className="px-4 py-3 font-semibold">Vencimiento</th>
+                    <th className="px-4 py-3 font-semibold">Método</th>
+                    <th className="px-4 py-3 font-semibold text-right">Acción</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pagosVisibles.map((p) => (
+                    <tr key={`${p.alumno_id}_${p.mes}_${p.anio}`} className="border-b border-gray-50 hover:bg-gray-50">
                     <td className="px-4 py-3 text-sm font-medium text-[#172033]">{p.alumno_nombre}</td>
                     <td className="px-4 py-3 text-sm text-slate-500">{p.turno ? NOMBRES_TURNO[p.turno] || p.turno : '—'}</td>
                     <td className="px-4 py-3 text-sm text-slate-500 text-center">{MESES[p.mes - 1]} {p.anio}</td>
@@ -343,54 +621,15 @@ function Pagos() {
                     <td className="px-4 py-3 text-sm text-slate-500">{p.estado === 'pagado' ? formatDate(p.fecha_pago) : '—'}</td>
                     <td className="px-4 py-3 text-sm text-slate-500">{formatDate(p.fecha_vencimiento)}</td>
                     <td className="px-4 py-3 text-sm text-slate-500">{p.metodo_pago || '—'}</td>
-                    <td className="px-4 py-3 text-right text-sm space-x-2 whitespace-nowrap">
+                    <td className="px-4 py-3 text-right space-x-1.5 whitespace-nowrap">
                       {p.estado === 'pagado' && (
-                        <button
-                          onClick={() => {
-                            const w = window.open('', '_blank');
-                            w.document.write(`
-                              <html><head><title>Comprobante INVICTUS</title>
-                              <style>body{font-family:Arial,sans-serif;max-width:400px;margin:40px auto;padding:20px;border:2px solid #333}
-                              h2{text-align:center;border-bottom:2px solid #333;padding-bottom:10px;margin-bottom:20px}
-                              .row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px dashed #ccc}
-                              .label{color:#666;font-size:13px}.value{font-weight:bold;font-size:14px}
-                              .total{font-size:18px;text-align:right;margin-top:15px;padding-top:10px;border-top:2px solid #333}
-                              .footer{text-align:center;margin-top:30px;font-size:11px;color:#999}</style></head><body>
-                              <h2>🥊 INVICTUS BOXEO</h2>
-                              <p style="text-align:center;color:#666;font-size:12px">COMPROBANTE DE PAGO</p>
-                              <div class="row"><span class="label">Alumno:</span><span class="value">${p.alumno_nombre || ''}</span></div>
-                              <div class="row"><span class="label">Mes:</span><span class="value">${MESES[p.mes - 1]} ${p.anio}</span></div>
-                              <div class="row"><span class="label">Estado:</span><span class="value">Pagado</span></div>
-                              <div class="row"><span class="label">Monto:</span><span class="value">Bs ${formatMonto(p.monto)}</span></div>
-                              <div class="row"><span class="label">Método:</span><span class="value">${p.metodo_pago || '—'}</span></div>
-                              <div class="row"><span class="label">Fecha pago:</span><span class="value">${formatDate(p.fecha_pago)}</span></div>
-                              <div class="row"><span class="label">Vencimiento:</span><span class="value">${formatDate(p.fecha_vencimiento)}</span></div>
-                              <div class="total"><strong>TOTAL: Bs ${formatMonto(p.monto)}</strong></div>
-                              <div class="footer">Invictus Boxeo Academy<br>${new Date().toLocaleDateString('es-ES')}</div>
-                              </body></html>`);
-                            w.document.close();
-                            w.print();
-                          }}
-                          className="text-slate-500 hover:text-[#172033] font-medium"
-                          title="Imprimir comprobante"
-                        >
-                          Imprimir
-                        </button>
+                        <ActionButton tipo="imprimir" onClick={() => imprimirComprobante(p)} titulo="Imprimir comprobante" />
                       )}
                       {p.estado !== 'pagado' && (
-                        <button
-                          onClick={() => openPagoModal(p)}
-                          className="text-green-600 hover:text-green-800 font-medium"
-                        >
-                          Marcar Pagado
-                        </button>
+                        <ActionButton tipo="pagado" onClick={() => openPagoModal(p)} />
                       )}
-                      <button
-                        onClick={() => openHistorial(p)}
-                        className="text-invictus-600 hover:text-invictus-800 font-medium"
-                      >
-                        Historial
-                      </button>
+                      <ActionButton tipo="editar" onClick={() => openEditarPago(p)} />
+                      <ActionButton tipo="historial" onClick={() => openHistorial(p)} />
                     </td>
                   </tr>
                 ))}
@@ -399,11 +638,14 @@ function Pagos() {
           </div>
         )}
       </div>
+    )}
 
       {showPagoModal && selectedAlumno && (
         <div className="fixed inset-0 bg-[#071A2B]/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
           <div className="bg-white rounded-2xl shadow-modal p-6 w-full max-w-md mx-4 animate-scale-in">
-            <h3 className="text-lg font-bold text-[#172033] mb-4">Registrar Pago</h3>
+            <h3 className="text-lg font-bold text-[#172033] mb-4">
+              {modoPago === 'editar' ? 'Editar Pago' : 'Registrar Pago'}
+            </h3>
             <div className="bg-gray-50 rounded-lg p-3 mb-4">
               <p className="text-sm font-medium text-[#172033]">{selectedAlumno.alumno_nombre}</p>
               <p className="text-xs text-slate-500">{MESES[mes - 1]} {anio}</p>
@@ -421,6 +663,20 @@ function Pagos() {
                   required
                 />
               </div>
+              {modoPago === 'editar' && (
+                <div>
+                  <label className="block text-sm font-medium text-slate-500 mb-1">Estado</label>
+                  <select
+                    value={formPago.estado}
+                    onChange={(e) => setFormPago({ ...formPago, estado: e.target.value })}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                  >
+                    <option value="pagado">Pagado</option>
+                    <option value="pendiente">Pendiente</option>
+                    <option value="vencido">Vencido</option>
+                  </select>
+                </div>
+              )}
               <div>
                 <label className="block text-sm font-medium text-slate-500 mb-1">Método de pago</label>
                 <select
@@ -441,9 +697,20 @@ function Pagos() {
                   value={formPago.fecha_pago}
                   onChange={(e) => setFormPago({ ...formPago, fecha_pago: e.target.value })}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-                  required
+                  required={modoPago !== 'editar'}
                 />
               </div>
+              {modoPago === 'editar' && (
+                <div>
+                  <label className="block text-sm font-medium text-slate-500 mb-1">Fecha de vencimiento</label>
+                  <input
+                    type="date"
+                    value={formPago.fecha_vencimiento}
+                    onChange={(e) => setFormPago({ ...formPago, fecha_vencimiento: e.target.value })}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                  />
+                </div>
+              )}
               <div>
                 <label className="block text-sm font-medium text-slate-500 mb-1">Observación (opcional)</label>
                 <textarea
@@ -458,7 +725,7 @@ function Pagos() {
                   className="px-4 py-2 text-sm text-slate-500 hover:text-[#172033]">Cancelar</button>
                 <button type="submit"
                   className="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-700">
-                  Registrar Pago
+                  {modoPago === 'editar' ? 'Guardar Cambios' : 'Registrar Pago'}
                 </button>
               </div>
             </form>
@@ -522,6 +789,9 @@ function Pagos() {
         </div>
       )}
     </div>
+
+    <ReportPDFPreview open={previewOpen} onClose={() => setPreviewOpen(false)} doc={docPreview} />
+    </>
   );
 }
 

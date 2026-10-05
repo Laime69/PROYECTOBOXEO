@@ -2,9 +2,11 @@ import { useState, useEffect, useCallback } from 'react';
 import { useTituloPagina } from '../../hooks/useTituloPagina';
 import { getAsistenciasEntrenador } from '../../services/reporteService';
 import { getAsistencias } from '../../services/asistenciaService';
+import { getUsers } from '../../services/usuarioService';
 import ReportPDFPreview from '../../components/ReportPDFPreview';
 import Paginacion from '../../components/Paginacion';
 import CabeceraPagina from '../../components/CabeceraPagina';
+import AutocompleteUsuario from '../../components/AutocompleteUsuario';
 
 const ESTADOS_ASISTENCIA = ['presente', 'falta', 'tardanza', 'justificado', 'permiso'];
 const ESTADO_LABELS = {
@@ -29,6 +31,7 @@ function EntrenadorReportes() {
   const [fechaFin, setFechaFin] = useState(hoyIso());
   const [estado, setEstado] = useState('');
   const [busqueda, setBusqueda] = useState('');
+  const [alumnos, setAlumnos] = useState([]);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [pagina, setPagina] = useState(1);
   const [porPagina, setPorPagina] = useState(10);
@@ -56,7 +59,20 @@ function EntrenadorReportes() {
     }
   }, [fechaInicio, fechaFin, estado, busqueda]);
 
-  useEffect(() => { cargar(); }, []);
+  useEffect(() => {
+    const t = setTimeout(() => cargar(), 350);
+    return () => clearTimeout(t);
+  }, [cargar]);
+
+  useEffect(() => {
+    const cargarAlumnos = async () => {
+      try {
+        const data = await getUsers('Alumno');
+        setAlumnos(data.usuarios || []);
+      } catch {}
+    };
+    cargarAlumnos();
+  }, []);
 
   const periodoTexto = `Período: ${formatDate(fechaInicio)} al ${formatDate(fechaFin)}`;
 
@@ -92,11 +108,12 @@ function EntrenadorReportes() {
       {
         titulo: 'Detalle de asistencia',
         nota: 'Elaboración propia a partir de los registros del módulo de asistencias.',
-        columnas: ['#', 'Fecha', 'Alumno', 'Estado', 'Observación'],
+        columnas: ['#', 'Fecha', 'Alumno', 'Entrenador', 'Estado', 'Observación'],
         filas: detalle.map((f, i) => [
           i + 1,
           formatDate(f.fecha),
           f.alumno_nombre || '—',
+          f.entrenador_nombre || '—',
           ESTADO_LABELS[f.estado] || f.estado,
           f.observacion || '—',
         ]),
@@ -157,15 +174,15 @@ function EntrenadorReportes() {
           </div>
           <div className="flex-1 min-w-[180px]">
             <label className="block text-xs text-slate-500 mb-1">Buscar alumno</label>
-            <input type="text" placeholder="Nombre o correo..." value={busqueda}
-              onChange={(e) => setBusqueda(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && cargar()}
-              className="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm" />
+            <AutocompleteUsuario
+              texto={busqueda}
+              onTexto={setBusqueda}
+              alumnos={alumnos}
+              onSubmit={cargar}
+              placeholder="Nombre, correo o CI..."
+            />
           </div>
-          <button onClick={cargar}
-            className="bg-gray-800 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-black">
-            Aplicar filtros
-          </button>
+          {loading && <span className="text-xs text-slate-500 ml-auto py-1">Actualizando…</span>}
         </div>
       </div>
 
@@ -197,6 +214,7 @@ function EntrenadorReportes() {
                   <th className="px-4 py-3 font-semibold">#</th>
                   <th className="px-4 py-3 font-semibold">Fecha</th>
                   <th className="px-4 py-3 font-semibold">Alumno</th>
+                  <th className="px-4 py-3 font-semibold">Entrenador</th>
                   <th className="px-4 py-3 font-semibold">Estado</th>
                   <th className="px-4 py-3 font-semibold">Observación</th>
                 </tr>
@@ -207,6 +225,7 @@ function EntrenadorReportes() {
                     <td className="px-4 py-3 text-sm text-gray-400">{(pagina - 1) * porPagina + idx + 1}</td>
                     <td className="px-4 py-3 text-sm text-slate-500">{formatDate(f.fecha)}</td>
                     <td className="px-4 py-3 text-sm font-medium text-[#172033]">{f.alumno_nombre || '—'}</td>
+                    <td className="px-4 py-3 text-sm text-slate-500">{f.entrenador_nombre || '—'}</td>
                     <td className="px-4 py-3">
                       <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
                         f.estado === 'presente' ? 'bg-green-100 text-green-700'

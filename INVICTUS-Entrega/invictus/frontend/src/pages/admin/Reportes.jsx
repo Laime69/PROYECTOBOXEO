@@ -5,6 +5,7 @@ import { getUsers } from '../../services/usuarioService';
 import ReportPDFPreview from '../../components/ReportPDFPreview';
 import Paginacion from '../../components/Paginacion';
 import CabeceraPagina from '../../components/CabeceraPagina';
+import AutocompleteUsuario from '../../components/AutocompleteUsuario';
 
 const MESES = [
   'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
@@ -46,6 +47,7 @@ function Reportes() {
   const [entrenadorFiltro, setEntrenadorFiltro] = useState('');
   const [busquedaAsistencia, setBusquedaAsistencia] = useState('');
   const [entrenadores, setEntrenadores] = useState([]);
+  const [alumnos, setAlumnos] = useState([]);
   const [datosAsistencia, setDatosAsistencia] = useState(null);
   const [loadingAsistencia, setLoadingAsistencia] = useState(false);
 
@@ -76,8 +78,12 @@ function Reportes() {
       try {
         const data = await getResumenGeneral();
         setResumenGeneral(data.resumen);
-        const usersData = await getUsers('Entrenador');
-        setEntrenadores(usersData.usuarios || []);
+        const [usersEntrenadores, usersAlumnos] = await Promise.all([
+          getUsers('Entrenador'),
+          getUsers('Alumno'),
+        ]);
+        setEntrenadores(usersEntrenadores.usuarios || []);
+        setAlumnos(usersAlumnos.usuarios || []);
       } catch {
         setError('Error al cargar reportes');
       } finally {
@@ -122,6 +128,18 @@ function Reportes() {
       setLoadingPagos(false);
     }
   }, [mesPago, anioPago, estadoPago, turnoPago, busquedaPago]);
+
+  useEffect(() => {
+    if (tipoReporte !== 'asistencias') return;
+    const t = setTimeout(() => cargarAsistencias(), 350);
+    return () => clearTimeout(t);
+  }, [cargarAsistencias, tipoReporte]);
+
+  useEffect(() => {
+    if (tipoReporte !== 'pagos') return;
+    const t = setTimeout(() => cargarPagos(), 350);
+    return () => clearTimeout(t);
+  }, [cargarPagos, tipoReporte]);
 
   const periodoTexto = `Período: ${formatDate(fechaInicio)} al ${formatDate(fechaFin)}`;
   const periodoTextoPagos = `Período: ${MESES[mesPago - 1]} ${anioPago}`;
@@ -253,9 +271,7 @@ function Reportes() {
     { id: 'pagos', label: 'Pagos' },
   ];
 
-  const cargando = (tipoReporte === 'resumen' && loadingResumen)
-    || (tipoReporte === 'asistencias' && loadingAsistencia)
-    || (tipoReporte === 'pagos' && loadingPagos);
+  const cargando = tipoReporte === 'resumen' && loadingResumen;
 
   return (
     <div>
@@ -280,8 +296,6 @@ function Reportes() {
             onClick={() => {
               setTipoReporte(t.id);
               setError('');
-              if (t.id === 'asistencias' && !datosAsistencia) cargarAsistencias();
-              if (t.id === 'pagos' && !datosPagos) cargarPagos();
             }}
             className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${
               tipoReporte === t.id
@@ -389,15 +403,20 @@ function Reportes() {
               </div>
               <div className="flex-1 min-w-[180px]">
                 <label className="block text-xs text-slate-500 mb-1">Buscar alumno</label>
-                <input type="text" placeholder="Nombre o correo..." value={busquedaAsistencia}
-                  onChange={(e) => setBusquedaAsistencia(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && cargarAsistencias()}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm" />
+                <AutocompleteUsuario
+                  texto={busquedaAsistencia}
+                  onTexto={setBusquedaAsistencia}
+                  alumnos={alumnos}
+                  onSubmit={cargarAsistencias}
+                  placeholder="Nombre, correo o CI..."
+                />
               </div>
-              <button onClick={cargarAsistencias}
-                className="bg-gray-800 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-black">
-                Aplicar filtros
-              </button>
+              {loadingAsistencia && (
+                <span className="text-xs text-slate-500 flex items-center gap-1.5 ml-auto py-1">
+                  <span className="w-3 h-3 border-2 border-invictus-200 border-t-invictus-600 rounded-full animate-spin" />
+                  Actualizando…
+                </span>
+              )}
             </div>
           </div>
 
@@ -520,15 +539,20 @@ function Reportes() {
               </div>
               <div className="flex-1 min-w-[180px]">
                 <label className="block text-xs text-slate-500 mb-1">Buscar alumno</label>
-                <input type="text" placeholder="Nombre, correo o CI..." value={busquedaPago}
-                  onChange={(e) => setBusquedaPago(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && cargarPagos()}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm" />
+                <AutocompleteUsuario
+                  texto={busquedaPago}
+                  onTexto={setBusquedaPago}
+                  alumnos={alumnos}
+                  onSubmit={cargarPagos}
+                  placeholder="Nombre, correo o CI..."
+                />
               </div>
-              <button onClick={cargarPagos}
-                className="bg-gray-800 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-black">
-                Aplicar filtros
-              </button>
+              {loadingPagos && (
+                <span className="text-xs text-slate-500 flex items-center gap-1.5 ml-auto py-1">
+                  <span className="w-3 h-3 border-2 border-invictus-200 border-t-invictus-600 rounded-full animate-spin" />
+                  Actualizando…
+                </span>
+              )}
             </div>
           </div>
 

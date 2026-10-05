@@ -60,7 +60,7 @@ docker compose up --build -d
 Esto levanta tres contenedores y, la **primera vez**, la base de datos ejecuta
 automáticamente y en orden:
 
-1. `database/schema.sql` — esquema normalizado (11 tablas).
+1. `database/schema.sql` — esquema normalizado en 3FN estricto (15 tablas).
 2. `database/seed.sql` — usuarios de todos los roles y sus perfiles.
 3. `database/seed-demo.sql` — horarios fijos, 10 alumnos, pagos,
    asistencias de las últimas dos semanas y evaluaciones de progreso.
@@ -100,6 +100,55 @@ psql -h localhost -U postgres -d invictus_boxeo -f database/seed-demo.sql  # dat
 
 > Si `createdb` no está disponible, use:
 > `psql -h localhost -U postgres -c "CREATE DATABASE invictus_boxeo;"`
+
+### 4.1.1 Base ya existente (actualizar a 3FN estricto)
+
+Si ya tiene una base con el esquema anterior, **no** vuelva a correr
+`schema.sql` sobre ella. En su lugar haga un backup y aplique la migración:
+
+```bash
+# 1. Backup obligatorio
+pg_dump -h localhost -U postgres -d invictus_boxeo -Fc \
+  -f database/backups/backup_pre_3fn_$(date +%Y%m%d_%H%M%S).dump
+
+# 2. Migración (transaccional: si algo falla, no cambia nada)
+psql -h localhost -U postgres -d invictus_boxeo -v ON_ERROR_STOP=1 \
+  -f database/migracion_3fn_estricta.sql
+```
+
+La migración valida los datos **antes** de tocar nada y se aborta sola con un
+mensaje claro si encuentra pagos huérfanos, membresías duplicadas, horarios
+imposibles o `tipo_actividad` fuera del catálogo. Al final imprime una tabla
+de verificación. Corrige lo que indique y vuelve a ejecutarla.
+
+Qué cambia respecto a la versión anterior:
+
+| Cambio | Detalle |
+|--------|---------|
+| `pagos.alumno_id` | **Se elimina** (dependencia transitiva de `membresia_id`). Se obtiene por join. |
+| `bitacora_acciones.rol` | Texto → `rol_id` con FK a `roles`. |
+| `alumno_horarios` | Un alumno puede estar en **varios** bloques a la vez. Antes solo uno. |
+| `membresias` | Un alumno no puede tener dos membresías `activa` simultáneas. |
+| `asistencias.tipo_actividad` | Nuevo `CHECK` contra el catálogo. |
+| `horarios` | Nuevo `CHECK`: `hora_fin > hora_inicio`. |
+
+> Los archivos `migracion_*.sql` anteriores a `migracion_3fn_estricta.sql`
+> son históricos y **no** deben ejecutarse: referencian tablas y columnas
+> que ya no existen (`usuarios.rol`, `perfiles_alumnos`, `progresos_alumnos`).
+> Por la misma razón `backend/scripts/normalizar_schema.js` ya cumplió su
+> función — fue lo que construyó el esquema actual — y no debe re-ejecutarse.
+
+### 4.1.2 Verificar la instalación
+
+Con el backend corriendo (sección 4.2) puede comprobar que todo responde:
+
+```bash
+cd backend
+node smoke-test.js
+```
+
+Ejecuta 30 comprobaciones sobre la API: autenticación, pagos, bitácora,
+horarios y el resto de módulos. Debe terminar con `0 FALLAS`.
 
 ### 4.2 Backend (puerto 4000)
 
@@ -189,9 +238,12 @@ invictus/
 ├── backend/              API REST Express (sin node_modules — se instalan con npm)
 ├── frontend/             Código React + Vite (sin node_modules)
 ├── database/
-│   ├── schema.sql              Esquema normalizado (11 tablas)
+│   ├── schema.sql              Esquema normalizado en 3FN estricto (15 tablas)
 │   ├── seed.sql                Usuarios de todos los roles + perfiles
-│   └── seed-demo.sql           Horarios, alumnos, pagos, asistencias y progreso
+│   ├── seed-demo.sql           Horarios, alumnos, pagos, asistencias y progreso
+│   └── migracion_3fn_estricta.sql   Actualiza bases existentes (ver 4.1.1)
+│                               Los demás migracion_*.sql son históricos:
+│                               NO ejecutarlos
 ├── nginx/                Configuración del proxy para Docker
 ├── docker-compose.yml    Orquestación de los tres servicios
 └── GUIA-INSTALACION.md   Este documento
@@ -210,6 +262,9 @@ invictus/
 | El puerto 8080 está ocupado (Docker) | Otro servicio usa 8080 | Cambiar el mapeo `"8080:80"` en `docker-compose.yml` |
 | El puerto 5432 está ocupado (local) | Ya hay un Postgres con otra contraseña | Ajustar `DB_PASSWORD` en `backend/.env` |
 | Quiero empezar de cero | La base tiene datos viejos | Docker: `docker compose down -v`. Local: `dropdb invictus_boxeo` y repetir el paso 4.1 |
+| La migración 3FN se aborta | Datos que impiden normalizar (pagos huérfanos, membresías duplicadas, horarios imposibles) | El mensaje indica exactamente qué corregir. Repara y vuelve a ejecutar la migración |
+| `columna "u.rol" does not exist` | Se actualizó `schema.sql` pero no el backend, o al revés | Backend y base deben ir juntos: aplicar el paso 4.1.1 o 4.1 completo |
+| `relation "perfiles_alumnos" does not exist` | Se ejecutó un `migracion_*.sql` antiguo | Esos archivos son históricos. Ver la nota de la sección 4.1.1 |
 
 ---
 

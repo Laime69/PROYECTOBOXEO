@@ -10,6 +10,11 @@ export const marcarPagado = async (data) => {
   return response.data;
 };
 
+export const actualizarPago = async (id, data) => {
+  const response = await api.patch(`/pagos/${id}`, data);
+  return response.data;
+};
+
 export const getResumenPagos = async (params = {}) => {
   const response = await api.get('/pagos/resumen', { params });
   return response.data;

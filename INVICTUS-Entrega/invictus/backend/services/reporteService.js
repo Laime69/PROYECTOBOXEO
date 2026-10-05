@@ -54,10 +54,33 @@ class ReporteService {
   }
 
   async getReportePagos({ mes, anio, estado, turno, busqueda }) {
-    const [resumenMes, filas] = await Promise.all([
+    const hoy = new Date();
+    const mesNum = mes ? parseInt(mes, 10) : hoy.getMonth() + 1;
+    const anioNum = anio ? parseInt(anio, 10) : hoy.getFullYear();
+
+    if (anioNum > hoy.getFullYear() || (anioNum === hoy.getFullYear() && mesNum > hoy.getMonth() + 1)) {
+      return {
+        es_futuro: true,
+        resumen: null,
+        filtros_aplicados: { pagados: 0, pendientes: 0, vencidos: 0, ingresos: 0 },
+        filas: [],
+      };
+    }
+
+    const [resumenMes, filasAll] = await Promise.all([
       Pago.getResumen(mes, anio),
       Pago.findAll({ mes, anio, estado, turno, busqueda }),
     ]);
+
+    const resumen = { ...resumenMes };
+    const esMesActual = anioNum === hoy.getFullYear() && mesNum === hoy.getMonth() + 1;
+    const filas = esMesActual ? filasAll : filasAll.filter(f => f.id_pago);
+
+    if (!esMesActual) {
+      resumen.total_alumnos = resumen.registros_mes;
+      resumen.pendientes_mes = Math.max(0, resumen.total_alumnos - resumen.pagados_mes - resumen.vencidos);
+    }
+    delete resumen.registros_mes;
 
     let ingresos_filtrados = 0;
     let pagados_filtrados = 0;
@@ -76,7 +99,7 @@ class ReporteService {
     }
 
     return {
-      resumen: { ...resumenMes },
+      resumen,
       filtros_aplicados: { pagados: pagados_filtrados, pendientes: pendientes_filtrados, vencidos: vencidos_filtrados, ingresos: ingresos_filtrados },
       filas,
     };

@@ -41,6 +41,19 @@ const ESTILOS = `
 
   @page { size: A4; margin: 14mm; }
   @media print { .pagina { padding: 0; } }
+
+  /* Compatibilidad de impresión: encabezados repetidos y filas completas por página */
+  thead { display: table-header-group; }
+  tfoot { display: table-footer-group; }
+  table { page-break-inside: auto; }
+  tr { page-break-inside: avoid; }
+  .seccion { page-break-after: avoid; }
+  .resumen, .filtros { page-break-inside: avoid; }
+
+  /* Gráficos SVG */
+  .grafico-box { border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px 14px 6px; margin-bottom: 16px; page-break-inside: avoid; }
+  .grafico-titulo { font-size: 12.5px; font-weight: bold; color: #1f2937; margin-bottom: 8px; }
+  .grafico-nota { font-size: 9.5px; color: #9ca3af; font-style: italic; margin: 2px 0 8px; text-align: center; }
 `;
 
 function escapar(valor) {
@@ -51,7 +64,142 @@ function escapar(valor) {
 
 const hoyIso = () => new Date().toISOString().slice(0, 10);
 
-export function construirDocumentoHTML({ titulo, periodo = '', filtros = [], resumen = [], secciones = [], generadoPor = '', notasFinales = '' }) {
+function _formatearNum(valor, unidad = '') {
+  const num = Number(valor);
+  if (!Number.isFinite(num)) return '—';
+  const dec = num % 1 !== 0 ? 1 : 0;
+  return num.toFixed(dec).replace('.', ',') + (unidad === '%' ? '%' : unidad ? ` ${unidad}` : '');
+}
+
+// Gráfico de líneas (SVG puro, sin librerías)
+function _svgLinea(g, validos) {
+  const { color = '#00A878', unidad = '', maximo = null, titulo = '' } = g;
+  const ancho = 780;
+  const alto = 230;
+  const padIzq = 52;
+  const padDer = 30;
+  const padTop = 26;
+  const padInf = 44;
+  const innerW = ancho - padIzq - padDer;
+  const innerH = alto - padTop - padInf;
+  const n = validos.length;
+  const max = maximo || Math.ceil(Math.max(...validos.map((v) => v.valor)) * 1.15) || 1;
+  const min = 0;
+  const px = (i) => padIzq + (n === 1 ? innerW / 2 : (i / (n - 1)) * innerW);
+  const py = (v) => padTop + innerH - ((v - min) / (max - min)) * innerH;
+
+  let grid = '';
+  for (let k = 0; k <= 4; k++) {
+    const v = min + ((max - min) * k) / 4;
+    const y = py(v);
+    grid += `<line x1="${padIzq}" y1="${y}" x2="${ancho - padDer}" y2="${y}" stroke="#e5e7eb" stroke-width="1"/>
+      <text x="${padIzq - 8}" y="${y + 4}" text-anchor="end" font-size="11" fill="#9ca3af">${_formatearNum(v, unidad)}</text>`;
+  }
+
+  const pasoEtiqueta = Math.ceil(n / 8);
+  const etiquetas = validos
+    .map((p, i) => {
+      if (i % pasoEtiqueta !== 0 && i !== n - 1) return '';
+      return `<text x="${px(i)}" y="${alto - 14}" text-anchor="middle" font-size="11" fill="#6b7280">${escapar(p.etiqueta)}</text>`;
+    })
+    .join('');
+
+  const puntosStr = validos.map((p, i) => `${px(i)},${py(p.valor)}`).join(' ');
+
+  const puntos = validos
+    .map((p, i) => {
+      if (n > 12 && i % pasoEtiqueta !== 0 && i !== n - 1) return '';
+      return `<circle cx="${px(i)}" cy="${py(p.valor)}" r="3.5" fill="${color}"/>
+        <text x="${px(i)}" y="${py(p.valor) - 9}" text-anchor="middle" font-size="10.5" font-weight="bold" fill="${color}">${_formatearNum(p.valor, unidad)}</text>`;
+    })
+    .join('');
+
+  return `<div class="grafico-box">
+    <div class="grafico-titulo">${escapar(titulo)}</div>
+    <svg viewBox="0 0 ${ancho} ${alto}" width="100%" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">
+      ${grid}
+      <polyline points="${puntosStr}" fill="none" stroke="${color}" stroke-width="2.5"/>
+      ${puntos}
+      ${etiquetas}
+    </svg>
+  </div>`;
+}
+
+// Gráfico radar de áreas (SVG puro)
+function _svgRadar(g) {
+  const { categorias = [], valores = [], color = '#00A878', maximo = 10, titulo = '' } = g;
+  const n = categorias.length;
+  if (n === 0) return '';
+  const ancho = 500;
+  const alto = 280;
+  const cx = ancho / 2;
+  const cy = alto / 2 + 10;
+  const R = Math.min(ancho, alto) / 2 - 52;
+  const angulo = (i) => (2 * Math.PI * i) / n - Math.PI / 2;
+  const punto = (i, frac) => [cx + Math.cos(angulo(i)) * R * frac, cy + Math.sin(angulo(i)) * R * frac];
+  const fracVal = (i) => {
+    const v = Number(valores[i]);
+    if (!Number.isFinite(v) || v <= 0) return 0;
+    return Math.min(v / maximo, 1);
+  };
+
+  let anillos = '';
+  [0.25, 0.5, 0.75, 1].forEach((fr) => {
+    const pts = categorias.map((_, i) => punto(i, fr).join(',')).join(' ');
+    anillos += `<polygon points="${pts}" fill="none" stroke="#e2e8f0" stroke-width="1"/>`;
+  });
+
+  let ejes = '';
+  let etiquetas = '';
+  categorias.forEach((c, i) => {
+    const [ex, ey] = punto(i, 1);
+    ejes += `<line x1="${cx}" y1="${cy}" x2="${ex}" y2="${ey}" stroke="#e2e8f0" stroke-width="1"/>`;
+    const [lx, ly] = punto(i, 1.24);
+    const ajuste = Math.abs(lx - cx) < 4 ? 'middle' : lx > cx ? 'start' : 'end';
+    etiquetas += `<text x="${lx}" y="${ly}" text-anchor="${ajuste}" font-size="11" font-weight="600" fill="#374151" dominant-baseline="middle">${escapar(c)}</text>`;
+  });
+
+  const dataPts = categorias.map((_, i) => punto(i, fracVal(i)).join(',')).join(' ');
+  const puntos = categorias
+    .map((_, i) => {
+      const [dx, dy] = punto(i, fracVal(i));
+      return `<circle cx="${dx}" cy="${dy}" r="3.2" fill="${color}"/>`;
+    })
+    .join('');
+
+  return `<div class="grafico-box">
+    <div class="grafico-titulo">${escapar(titulo)}</div>
+    <svg viewBox="0 0 ${ancho} ${alto}" width="100%" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">
+      ${anillos}
+      ${ejes}
+      <polygon points="${dataPts}" fill="${color}" fill-opacity="0.25" stroke="${color}" stroke-width="2"/>
+      ${puntos}
+      ${etiquetas}
+    </svg>
+    <div class="grafico-nota">Promedio de cada área, escala 0–10</div>
+  </div>`;
+}
+
+function _construirGraficos(graficos) {
+  return (graficos || [])
+    .map((g) => {
+      if (g.tipo === 'linea') {
+        const validos = (g.puntos || [])
+          .map((p) => ({ etiqueta: p.etiqueta ?? '', valor: Number(p.valor) }))
+          .filter((p) => Number.isFinite(p.valor));
+        if (validos.length === 0) return '';
+        return _svgLinea(g, validos);
+      }
+      if (g.tipo === 'radar') {
+        return _svgRadar(g);
+      }
+      return '';
+    })
+    .filter(Boolean)
+    .join('');
+}
+
+export function construirDocumentoHTML({ titulo, periodo = '', filtros = [], resumen = [], graficos = [], secciones = [], generadoPor = '', notasFinales = '' }) {
   const htmlFiltros = filtros.length
     ? `<div class="filtros">
         <div class="filtros-titulo">Filtros aplicados</div>
@@ -66,6 +214,8 @@ export function construirDocumentoHTML({ titulo, periodo = '', filtros = [], res
           <span class="lbl">${escapar(r.etiqueta)}</span>
         </div>`).join('')}</div>`
     : '';
+
+  const htmlGraficos = _construirGraficos(graficos);
 
   const htmlSecciones = secciones.map((s, idx) => {
     const columnas = s.columnas || [];
@@ -108,6 +258,7 @@ export function construirDocumentoHTML({ titulo, periodo = '', filtros = [], res
     ${periodo ? `<p class="periodo">${escapar(periodo)}</p>` : ''}
     ${htmlFiltros}
     ${htmlResumen}
+    ${htmlGraficos}
     ${htmlSecciones}
     ${notasFinales ? `<p style="margin-top:14px;font-size:11px;color:#555;max-width:70ch;line-height:1.6;">${escapar(notasFinales)}</p>` : ''}
     <div class="pie">
